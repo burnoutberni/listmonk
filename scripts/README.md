@@ -1,6 +1,10 @@
-# Contact Transformer
+# Scripts
 
-Converts a semicolon-delimited Brevo export into two listmonk import CSV files.
+Helper scripts for Listmonk maintenance and migration tasks.
+
+## `convert_contacts.py`
+
+Converts a semicolon-delimited Brevo contact export into two Listmonk import CSV files.
 
 Expected input header:
 

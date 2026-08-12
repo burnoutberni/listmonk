@@ -1,3 +1,4 @@
-contact-transformer/contacts/
+scripts/contacts/
+contact-transformer/
 __pycache__/
 *.py[cod]

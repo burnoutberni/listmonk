@@ -1,33 +1,40 @@
-# Brevo to listmonk
+# Wir machen Wien Listmonk Setup
 
-Utilities and migration artifacts for moving newsletter data and templates from Brevo to listmonk.
+Configuration, templates, assets, and helper scripts for the Wir machen Wien Listmonk setup.
 
 ## Contents
 
-- `contact-transformer/`: Converts a Brevo contact CSV export into listmonk import CSV files.
-- `template-transformer/brevo-big.html`: Original Brevo newsletter HTML export used as the source template.
-- `template-transformer/listmonk/`: Converted listmonk campaign template plus the image, social icon, and font assets it needs.
+- `listmonk/`: Deployable Listmonk customizations, templates, public assets, and visual template source.
+- `scripts/`: Helper scripts for one-off maintenance and migration tasks.
+- `legacy/brevo/`: Original Brevo exports kept only as historical source material.
 
-## Contacts
+## Deployable Listmonk Files
 
-The contact transformer expects a semicolon-delimited Brevo export with this header:
+The `listmonk/` folder mirrors server destinations:
+
+- `listmonk/uploads/*` -> `/srv/wirmachenwien/listmonk/uploads/`
+- `listmonk/static/*` -> `/srv/wirmachenwien/listmonk/static/`
+
+The public asset URLs are served under:
+
+```text
+https://newsletter.wirmachen.wien/uploads/assets/
+```
+
+Listmonk appearance CSS is DB-backed, so `listmonk/static/public/custom.css` is the canonical source file, but its contents must be pasted into Listmonk's public appearance settings to affect `/public/custom.css`.
+
+## Contact Import Script
+
+The contact converter expects a semicolon-delimited Brevo export with this header:
 
 ```csv
 EMAIL;VORNAME;NACHNAME;ANREDE;JOURFIXE
 ```
 
-Run it from `contact-transformer/`:
+Run it from `scripts/`:
 
 ```bash
 python3 convert_contacts.py contacts/data.csv
 ```
 
-Generated contact CSVs are written to `contact-transformer/contacts/`. That folder is ignored by git because it contains private subscriber data.
-
-## Template
-
-The listmonk template is in `template-transformer/listmonk/template.html`.
-
-It includes listmonk template placeholders for campaign content, hosted-message links, unsubscribe/preferences links, and open tracking. Asset URLs point to the public listmonk upload path at `https://newsletter.wirmachen.wien/uploads/assets/`.
-
-The committed assets are the source copy for that upload folder. If an asset changes, update `template-transformer/listmonk/assets/` and upload the matching files to the server.
+Generated contact CSVs are written to `scripts/contacts/`. That folder is ignored by git because it contains private subscriber data.
