@@ -8,6 +8,7 @@ Files:
 - `uploads/assets/social/`: Active social icon assets.
 - `uploads/assets/fonts/`: Local CSS and font files for Bangers 400 and Roboto regular/bold/italic/bold-italic.
 - `static/email-templates/base.html`: Branded system email base template.
+- `static/public/custom.css`: Branded stylesheet for Listmonk public pages/forms.
 
 Server placement:
 
