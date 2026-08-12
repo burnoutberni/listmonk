@@ -3,9 +3,16 @@ Listmonk template converted from `../brevo-big.html`.
 Files:
 
 - `template.html`: Listmonk campaign template HTML.
-- `assets/images/`: Newsletter image assets downloaded from the Brevo export.
-- `assets/social/`: Active social icon assets.
-- `assets/fonts/`: Local CSS and font files for Bangers 400 and Roboto regular/bold/italic/bold-italic.
+- `visual-template.json`: Listmonk visual editor source JSON for a visual campaign template.
+- `uploads/assets/images/`: Newsletter image assets downloaded from the Brevo export.
+- `uploads/assets/social/`: Active social icon assets.
+- `uploads/assets/fonts/`: Local CSS and font files for Bangers 400 and Roboto regular/bold/italic/bold-italic.
+- `static/email-templates/base.html`: Branded system email base template.
+
+Server placement:
+
+- Copy `uploads/*` to `/srv/wirmachenwien/listmonk/uploads/`.
+- Copy `static/*` to `/srv/wirmachenwien/listmonk/static/`.
 
 Listmonk requirements included in `template.html`:
 
