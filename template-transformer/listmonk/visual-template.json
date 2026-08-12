@@ -1,0 +1,488 @@
+{
+  "root": {
+    "type": "EmailLayout",
+    "data": {
+      "backdropColor": "#00a77e",
+      "canvasColor": "#ffffff",
+      "textColor": "#140958",
+      "fontFamily": "MODERN_SANS",
+      "childrenIds": [
+        "block-fonts",
+        "block-browser-link",
+        "block-header-logo",
+        "block-intro-container",
+        "block-section-1-container",
+        "block-donation-container",
+        "block-outro-container",
+        "block-footer-heading",
+        "block-social-columns",
+        "block-footer-links"
+      ],
+      "outlook": true
+    }
+  },
+  "block-fonts": {
+    "type": "Html",
+    "data": {
+      "style": {
+        "fontSize": 1,
+        "padding": {
+          "top": 0,
+          "bottom": 0,
+          "right": 0,
+          "left": 0
+        }
+      },
+      "props": {
+        "contents": "<style>@font-face { font-family: 'Bangers'; font-style: normal; font-weight: 400; font-display: swap; mso-font-alt: 'Arial Black'; src: url('https://newsletter.wirmachen.wien/uploads/assets/fonts/bangers-400.ttf') format('truetype'); } @font-face { font-family: 'Roboto'; font-style: normal; font-weight: 400; font-display: swap; mso-font-alt: 'Arial'; src: url('https://newsletter.wirmachen.wien/uploads/assets/fonts/roboto-400.ttf') format('truetype'); } @font-face { font-family: 'Roboto'; font-style: normal; font-weight: 700; font-display: swap; mso-font-alt: 'Arial'; src: url('https://newsletter.wirmachen.wien/uploads/assets/fonts/roboto-700.ttf') format('truetype'); } @font-face { font-family: 'Roboto'; font-style: italic; font-weight: 400; font-display: swap; mso-font-alt: 'Arial'; src: url('https://newsletter.wirmachen.wien/uploads/assets/fonts/roboto-400-italic.ttf') format('truetype'); } @font-face { font-family: 'Roboto'; font-style: italic; font-weight: 700; font-display: swap; mso-font-alt: 'Arial'; src: url('https://newsletter.wirmachen.wien/uploads/assets/fonts/roboto-700-italic.ttf') format('truetype'); }</style>"
+      }
+    }
+  },
+  "block-browser-link": {
+    "type": "Text",
+    "data": {
+      "style": {
+        "color": "#ffffff",
+        "backgroundColor": "#00a77e",
+        "fontSize": 16,
+        "fontWeight": "normal",
+        "textAlign": "center",
+        "padding": {
+          "top": 20,
+          "bottom": 5,
+          "right": 24,
+          "left": 24
+        }
+      },
+      "props": {
+        "markdown": true,
+        "text": "<a href=\"{{ MessageURL }}\" style=\"color:#ffffff;text-decoration:underline;\">Im Browser öffnen</a>"
+      }
+    }
+  },
+  "block-header-logo": {
+    "type": "Image",
+    "data": {
+      "style": {
+        "padding": {
+          "top": 20,
+          "bottom": 20,
+          "right": 20,
+          "left": 20
+        },
+        "backgroundColor": "#00a77e",
+        "textAlign": "center"
+      },
+      "props": {
+        "width": 200,
+        "height": null,
+        "url": "https://newsletter.wirmachen.wien/uploads/assets/images/header-logo.png",
+        "alt": "#WirMachenWien",
+        "linkHref": "https://wirmachen.wien",
+        "contentAlignment": "middle",
+        "embed": false
+      }
+    }
+  },
+  "block-intro-container": {
+    "type": "Container",
+    "data": {
+      "style": {
+        "padding": {
+          "top": 24,
+          "bottom": 0,
+          "right": 24,
+          "left": 24
+        }
+      },
+      "props": {
+        "childrenIds": [
+          "block-greeting",
+          "block-intro"
+        ]
+      }
+    }
+  },
+  "block-greeting": {
+    "type": "Text",
+    "data": {
+      "style": {
+        "fontSize": 20,
+        "fontWeight": "normal",
+        "padding": {
+          "top": 0,
+          "bottom": 0,
+          "right": 0,
+          "left": 0
+        }
+      },
+      "props": {
+        "markdown": true,
+        "text": "Liebe:r {{ if .Subscriber.FirstName }}{{ .Subscriber.FirstName }}{{ else }}Wien-Macher:in{{ end }}!"
+      }
+    }
+  },
+  "block-intro": {
+    "type": "Text",
+    "data": {
+      "style": {
+        "fontSize": 20,
+        "fontWeight": "normal",
+        "padding": {
+          "top": 0,
+          "bottom": 0,
+          "right": 0,
+          "left": 0
+        }
+      },
+      "props": {
+        "markdown": true,
+        "text": "Dir brauchen wir es nicht zu erzählen: **Die Klimakrise ist längst da.** Unser Mittel, um trotz Sorgen und Hitze handlungsfähig zu bleiben: **aktiv werden.**"
+      }
+    }
+  },
+  "block-section-1-heading": {
+    "type": "Html",
+    "data": {
+      "style": {
+        "padding": {
+          "top": 0,
+          "bottom": 16,
+          "right": 0,
+          "left": 0
+        }
+      },
+      "props": {
+        "contents": "<h1 style=\"margin:0;color:#140958;font-family:Bangers, Impact, Arial Black, Arial, sans-serif;font-size:32px;font-weight:400;letter-spacing:.1em;line-height:1.2;\">Jetzt mitreden für eine bessere Taborstrasse!</h1>"
+      }
+    }
+  },
+  "block-section-1-container": {
+    "type": "Container",
+    "data": {
+      "style": {
+        "padding": {
+          "top": 0,
+          "bottom": 0,
+          "right": 24,
+          "left": 24
+        }
+      },
+      "props": {
+        "childrenIds": [
+          "block-section-1-divider",
+          "block-section-1-heading",
+          "block-section-1-image",
+          "block-section-1-text",
+          "block-section-1-button"
+        ]
+      }
+    }
+  },
+  "block-section-1-image": {
+    "type": "Image",
+    "data": {
+      "style": {
+        "padding": {
+          "top": 0,
+          "bottom": 16,
+          "right": 0,
+          "left": 0
+        }
+      },
+      "props": {
+        "width": 560,
+        "height": null,
+        "url": "https://newsletter.wirmachen.wien/uploads/assets/images/tag-der-wohnstrasse.jpeg",
+        "alt": "Visualisierung einer möglichen Umgestaltung der Taborstraße.",
+        "linkHref": "https://wirmachen.wien/blog/endspurt-fuer-die-taborstrasse-jetzt-mitreden-und-veraenderung-einfordern/",
+        "contentAlignment": "middle",
+        "embed": false
+      }
+    }
+  },
+  "block-section-1-text": {
+    "type": "Text",
+    "data": {
+      "style": {
+        "fontSize": 20,
+        "fontWeight": "normal",
+        "padding": {
+          "top": 4,
+          "bottom": 4,
+          "right": 0,
+          "left": 0
+        }
+      },
+      "props": {
+        "markdown": true,
+        "text": "Ab 2027 werden die Gleise in der Taborstraße erneuert. **Das ist die Chance, den Straßenraum neu zu verteilen:** mit sicheren Gehwegen, guter Radinfrastruktur, weniger Autoverkehr sowie mehr Bäumen, Schatten und Aufenthaltsqualität.\n\nWelche Verbesserungen wir fordern und warum deine Beteiligung jetzt wichtig ist, [liest du in unserem Blogpost](https://wirmachen.wien/blog/endspurt-fuer-die-taborstrasse-jetzt-mitreden-und-veraenderung-einfordern/)."
+      }
+    }
+  },
+  "block-section-1-button": {
+    "type": "Button",
+    "data": {
+      "style": {
+        "fontSize": 24,
+        "fontWeight": "bold",
+        "textAlign": "center",
+        "padding": {
+          "top": 8,
+          "bottom": 8,
+          "right": 0,
+          "left": 0
+        }
+      },
+      "props": {
+        "buttonBackgroundColor": "#fff200",
+        "buttonStyle": "rectangle",
+        "buttonTextColor": "#140958",
+        "size": "medium",
+        "text": "Jetzt mitmachen!",
+        "url": "https://mitgestalten.wien.gv.at/de-DE/projects/zukunft-taborstrasse/surveys/new?phase_id=71f5dc4f-56e8-414f-9ba6-c135cdd0e186"
+      }
+    }
+  },
+  "block-donation-container": {
+    "type": "Container",
+    "data": {
+      "style": {
+        "padding": {
+          "top": 0,
+          "bottom": 0,
+          "right": 24,
+          "left": 24
+        }
+      },
+      "props": {
+        "childrenIds": [
+          "block-donation-divider",
+          "block-donation-text"
+        ]
+      }
+    }
+  },
+  "block-donation-divider": {
+    "type": "Divider",
+    "data": {
+      "style": {
+        "padding": {
+          "top": 25,
+          "bottom": 25,
+          "right": 0,
+          "left": 0
+        }
+      },
+      "props": {
+        "lineColor": "#140958"
+      }
+    }
+  },
+  "block-donation-text": {
+    "type": "Text",
+    "data": {
+      "style": {
+        "fontSize": 20,
+        "fontWeight": "normal",
+        "padding": {
+          "top": 0,
+          "bottom": 0,
+          "right": 0,
+          "left": 0
+        }
+      },
+      "props": {
+        "markdown": true,
+        "text": "Damit wir weiter recherchieren, informieren und Menschen für eine lebenswertere Stadt mobilisieren können, **brauchen wir deine Unterstützung.**\n\nSchon **ein kleiner monatlicher Beitrag** hilft uns, unabhängig zu bleiben und Kampagnen wie diese langfristig weiterzuführen.\n\n[**>> Unterstütze #WirMachenWien mit deiner Spende!**](https://wirmachen.wien/spenden)"
+      }
+    }
+  },
+  "block-outro-container": {
+    "type": "Container",
+    "data": {
+      "style": {
+        "padding": {
+          "top": 0,
+          "bottom": 0,
+          "right": 24,
+          "left": 24
+        }
+      },
+      "props": {
+        "childrenIds": [
+          "block-outro-divider",
+          "block-closing"
+        ]
+      }
+    }
+  },
+  "block-outro-divider": {
+    "type": "Divider",
+    "data": {
+      "style": {
+        "padding": {
+          "top": 25,
+          "bottom": 25,
+          "right": 0,
+          "left": 0
+        }
+      },
+      "props": {
+        "lineColor": "#140958"
+      }
+    }
+  },
+  "block-closing": {
+    "type": "Text",
+    "data": {
+      "style": {
+        "fontSize": 20,
+        "fontWeight": "normal",
+        "padding": {
+          "top": 0,
+          "bottom": 25,
+          "right": 0,
+          "left": 0
+        }
+      },
+      "props": {
+        "markdown": true,
+        "text": "Genießt den Sommer – ob in eurer Sommeroase, auf der Donauinsel oder sogar auf der Straße!\n\nEuer Team von Wir machen Wien"
+      }
+    }
+  },
+  "block-footer-heading": {
+    "type": "Html",
+    "data": {
+      "style": {
+        "backgroundColor": "#00a77e",
+        "padding": {
+          "top": 48,
+          "bottom": 16,
+          "right": 24,
+          "left": 24
+        }
+      },
+      "props": {
+        "contents": "<h1 style=\"margin:0;color:#ffffff;text-align:center;font-family:Bangers, Impact, Arial Black, Arial, sans-serif;font-size:32px;font-weight:400;letter-spacing:.1em;line-height:1.2;\">Folge uns auf</h1>"
+      }
+    }
+  },
+  "block-social-columns": {
+    "type": "ColumnsContainer",
+    "data": {
+      "style": {
+        "backgroundColor": "#00a77e",
+        "padding": {
+          "top": 0,
+          "bottom": 0,
+          "right": 0,
+          "left": 0
+        }
+      },
+      "props": {
+        "columnsCount": 2,
+        "columnsGap": 16,
+        "columns": [
+          {
+            "childrenIds": [
+              "block-social-facebook"
+            ]
+          },
+          {
+            "childrenIds": [
+              "block-social-instagram"
+            ]
+          },
+          {
+            "childrenIds": []
+          }
+        ]
+      }
+    }
+  },
+  "block-social-facebook": {
+    "type": "Image",
+    "data": {
+      "style": {
+        "padding": {
+          "top": 0,
+          "bottom": 0,
+          "right": 0,
+          "left": 0
+        },
+        "textAlign": "right"
+      },
+      "props": {
+        "width": 48,
+        "height": 48,
+        "url": "https://newsletter.wirmachen.wien/uploads/assets/social/facebook_48px.png",
+        "alt": "Facebook",
+        "linkHref": "https://facebook.com/wirmachenwien",
+        "contentAlignment": "middle",
+        "embed": false
+      }
+    }
+  },
+  "block-social-instagram": {
+    "type": "Image",
+    "data": {
+      "style": {
+        "padding": {
+          "top": 0,
+          "bottom": 0,
+          "right": 0,
+          "left": 0
+        }
+      },
+      "props": {
+        "width": 48,
+        "height": 48,
+        "url": "https://newsletter.wirmachen.wien/uploads/assets/social/instagram_48px.png",
+        "alt": "Instagram",
+        "linkHref": "https://instagram.com/wirmachen.wien",
+        "contentAlignment": "middle",
+        "embed": false
+      }
+    }
+  },
+  "block-footer-links": {
+    "type": "Text",
+    "data": {
+      "style": {
+        "color": "#ffffff",
+        "backgroundColor": "#00a77e",
+        "fontSize": 16,
+        "fontWeight": "normal",
+        "textAlign": "center",
+        "padding": {
+          "top": 30,
+          "bottom": 30,
+          "right": 24,
+          "left": 24
+        }
+      },
+      "props": {
+        "markdown": true,
+        "text": "<a href=\"{{ UnsubscribeURL }}\" style=\"color:#ffffff;text-decoration:underline;\">Vom Newsletter abmelden</a> &nbsp;&middot;&nbsp; <a href=\"{{ MessageURL }}\" style=\"color:#ffffff;text-decoration:underline;\">Im Browser ansehen</a>\n\nVerein Fairkehrswende, Lichtenauergasse 4/1/1, 1020 Wien\n<a href=\"mailto:info@wirmachen.wien\" style=\"color:#ffffff;text-decoration:underline;\">info@wirmachen.wien</a>\n\n{{ TrackView }}"
+      }
+    }
+  },
+  "block-section-1-divider": {
+    "type": "Divider",
+    "data": {
+      "style": {
+        "padding": {
+          "top": 25,
+          "bottom": 25,
+          "right": 0,
+          "left": 0
+        }
+      },
+      "props": {
+        "lineColor": "#140958"
+      }
+    }
+  }
+}
