@@ -1,16 +1,16 @@
-.wmw-listmonk-signup {
+.listmonk-signup {
 	max-width: 46rem;
 }
 
-.wmw-listmonk-signup__step {
+.listmonk-signup__step {
 	border: 0;
 	border-left: 4px solid #111;
 	margin: 0 0 1.5rem;
 	padding: 0 0 0 1rem;
 }
 
-.wmw-listmonk-signup__step h2,
-.wmw-listmonk-signup__districts legend {
+.listmonk-signup__step h2,
+.listmonk-signup__districts legend {
 	align-items: center;
 	display: flex;
 	font-size: 1.2rem;
@@ -20,8 +20,8 @@
 	margin: 0 0 1rem;
 }
 
-.wmw-listmonk-signup__step h2 span,
-.wmw-listmonk-signup__districts legend span {
+.listmonk-signup__step h2 span,
+.listmonk-signup__districts legend span {
 	align-items: center;
 	background: #111;
 	border-radius: 999px;
@@ -34,48 +34,48 @@
 	width: 2rem;
 }
 
-.wmw-listmonk-signup__field {
+.listmonk-signup__field {
 	margin: 0 0 1rem;
 }
 
-.wmw-listmonk-signup label {
+.listmonk-signup label {
 	display: block;
 	font-weight: 600;
 }
 
-.wmw-listmonk-signup input[type="text"],
-.wmw-listmonk-signup input[type="email"] {
+.listmonk-signup input[type="text"],
+.listmonk-signup input[type="email"] {
 	box-sizing: border-box;
 	max-width: 32rem;
 	width: 100%;
 }
 
-.wmw-listmonk-signup__grid {
+.listmonk-signup__grid {
 	display: grid;
 	gap: 0 1rem;
 	grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
 	max-width: 42rem;
 }
 
-.wmw-listmonk-signup__districts {
+.listmonk-signup__districts {
 	padding-left: 1rem;
 }
 
-.wmw-listmonk-signup__hint {
+.listmonk-signup__hint {
 	margin: -.5rem 0 1rem;
 }
 
-.wmw-listmonk-signup__district-grid {
+.listmonk-signup__district-grid {
 	display: grid;
 	gap: .55rem;
 	grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
 }
 
-.wmw-listmonk-signup__district {
+.listmonk-signup__district {
 	cursor: pointer;
 }
 
-.wmw-listmonk-signup__district input {
+.listmonk-signup__district input {
 	clip: rect(0 0 0 0);
 	height: 1px;
 	overflow: hidden;
@@ -83,7 +83,7 @@
 	width: 1px;
 }
 
-.wmw-listmonk-signup__district span {
+.listmonk-signup__district span {
 	border: 2px solid #d7d7d7;
 	border-radius: 999px;
 	display: block;
@@ -92,55 +92,55 @@
 	transition: background .15s, border-color .15s, box-shadow .15s, transform .15s;
 }
 
-.wmw-listmonk-signup__district input:checked + span {
+.listmonk-signup__district input:checked + span {
 	background: #111;
 	border-color: #111;
 	color: #fff;
 }
 
-.wmw-listmonk-signup__district input:focus + span {
+.listmonk-signup__district input:focus + span {
 	box-shadow: 0 0 0 3px rgba(17, 17, 17, .22);
 }
 
-.wmw-listmonk-signup__district:hover span {
+.listmonk-signup__district:hover span {
 	border-color: #111;
 	transform: translateY(-1px);
 }
 
-.wmw-listmonk-signup__field--consent label {
+.listmonk-signup__field--consent label {
 	display: flex;
 	gap: .6rem;
 	font-weight: 400;
 }
 
-.wmw-listmonk-signup__field--consent input {
+.listmonk-signup__field--consent input {
 	margin-top: .25rem;
 }
 
-.wmw-listmonk-signup__field--hp {
+.listmonk-signup__field--hp {
 	left: -9999px;
 	position: absolute;
 }
 
-.wmw-listmonk-signup__step--submit button {
+.listmonk-signup__step--submit button {
 	font-size: 1.1rem;
 	font-weight: 800;
 	padding: .75rem 1rem;
 }
 
-.wmw-listmonk-signup__message {
+.listmonk-signup__message {
 	border-left: 4px solid #111;
 	font-weight: 700;
 	margin: 0 0 1.5rem;
 	padding: .75rem 1rem;
 }
 
-.wmw-listmonk-signup__message--error {
+.listmonk-signup__message--error {
 	border-color: #b32d2e;
 	color: #b32d2e;
 }
 
-.wmw-listmonk-signup__message--success {
+.listmonk-signup__message--success {
 	border-color: #008a20;
 	color: #008a20;
 }

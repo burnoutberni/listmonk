@@ -1,30 +1,35 @@
 <?php
 /**
- * Plugin Name: Wir machen Wien Listmonk Signup
- * Description: Site-specific newsletter signup shortcode for Listmonk.
+ * Plugin Name: Listmonk Signup
+ * Plugin URI: https://github.com/burnoutberni/listmonk
+ * Description: Adds a configurable Listmonk newsletter signup shortcode for WordPress.
  * Version: 1.0.0
+ * Requires at least: 6.4
+ * Requires PHP: 8.1
  * Author: Bernhard Hayden
- * License: AGPL-3.0
- * Text Domain: wmw-listmonk-signup
+ * Author URI: https://bhayden.at
+ * License: AGPL-3.0-or-later
+ * License URI: https://www.gnu.org/licenses/agpl-3.0.html
+ * Text Domain: listmonk-signup
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-final class WMW_Listmonk_Signup {
-	private const OPTION_NAME = 'wmw_listmonk_signup_settings';
-	private const LOG_OPTION_NAME = 'wmw_listmonk_signup_logs';
-	private const API_FAILURE_OPTION_NAME = 'wmw_listmonk_signup_api_failures';
-	private const SUBMISSION_ACTION = 'wmw_listmonk_signup';
-	private const NONCE_ACTION = 'wmw_listmonk_signup_submit';
-	private const NONCE_NAME = 'wmw_listmonk_signup_nonce';
-	private const SUBMISSION_TOKEN_NAME = 'wmw_listmonk_submission_token';
-	private const SUBMISSION_TOKEN_PREFIX = 'wmw_listmonk_submission_token_';
-	private const SUBMISSION_TOKEN_CLAIM_PREFIX = 'wmw_listmonk_submission_token_claim_';
-	private const CLEAR_LOGS_ACTION = 'wmw_listmonk_signup_clear_logs';
-	private const RESULT_QUERY_ARG = 'wmw_listmonk_signup_result';
-	private const RESULT_TRANSIENT_PREFIX = 'wmw_listmonk_signup_result_';
+final class Listmonk_Signup {
+	private const OPTION_NAME = 'listmonk_signup_settings';
+	private const LOG_OPTION_NAME = 'listmonk_signup_logs';
+	private const API_FAILURE_OPTION_NAME = 'listmonk_signup_api_failures';
+	private const SUBMISSION_ACTION = 'listmonk_signup';
+	private const NONCE_ACTION = 'listmonk_signup_submit';
+	private const NONCE_NAME = 'listmonk_signup_nonce';
+	private const SUBMISSION_TOKEN_NAME = 'listmonk_submission_token';
+	private const SUBMISSION_TOKEN_PREFIX = 'listmonk_submission_token_';
+	private const SUBMISSION_TOKEN_CLAIM_PREFIX = 'listmonk_submission_token_claim_';
+	private const CLEAR_LOGS_ACTION = 'listmonk_signup_clear_logs';
+	private const RESULT_QUERY_ARG = 'listmonk_signup_result';
+	private const RESULT_TRANSIENT_PREFIX = 'listmonk_signup_result_';
 	private const RATE_LIMIT_SECONDS = 300;
 	private const RATE_LIMIT_EMAIL_IP_MAX = 5;
 	private const RATE_LIMIT_IP_MAX = 25;
@@ -60,12 +65,12 @@ final class WMW_Listmonk_Signup {
 
 	private static function defaults(): array {
 		return [
-			'base_url'        => 'https://newsletter.wirmachen.wien',
+			'base_url'        => 'https://newsletter.example.com',
 			'api_token'       => '',
 			'list_ids'        => '3',
 			'success_message' => 'Vielen Dank! Bitte prüfe dein E-Mail-Postfach und bestätige deine Anmeldung.',
 			'error_message'   => 'Die Anmeldung konnte leider nicht abgeschlossen werden. Bitte versuche es später erneut.',
-			'consent_text'    => 'Ich möchte den Newsletter von Wir machen Wien abonnieren und akzeptiere, dass meine Angaben zur Zusendung des Newsletters verarbeitet werden. Hinweise findest du in unserer <a href="https://wirmachen.wien/datenschutz">Datenschutzerklärung</a>. Ich kann mich jederzeit wieder abmelden.',
+			'consent_text'    => 'Ich möchte den Newsletter abonnieren und akzeptiere, dass meine Angaben zur Zusendung des Newsletters verarbeitet werden. Hinweise findest du in der Datenschutzerklärung. Ich kann mich jederzeit wieder abmelden.',
 			'debug_logging'   => '0',
 		];
 	}
@@ -109,14 +114,14 @@ final class WMW_Listmonk_Signup {
 			'Listmonk Signup',
 			'Listmonk Signup',
 			'manage_options',
-			'wmw-listmonk-signup',
+			'listmonk-signup',
 			[ $this, 'render_settings_page' ]
 		);
 	}
 
 	public function register_settings(): void {
 		register_setting(
-			'wmw_listmonk_signup',
+			'listmonk_signup',
 			self::OPTION_NAME,
 			[
 				'type'              => 'array',
@@ -136,7 +141,7 @@ final class WMW_Listmonk_Signup {
 		if ( '' !== $base_url && 'https' !== wp_parse_url( $base_url, PHP_URL_SCHEME ) ) {
 			add_settings_error(
 				self::OPTION_NAME,
-				'wmw_listmonk_base_url_https',
+				'listmonk_base_url_https',
 				'Listmonk base URL must start with https://.',
 				'error'
 			);
@@ -150,14 +155,14 @@ final class WMW_Listmonk_Signup {
 		if ( '' === $api_token ) {
 			add_settings_error(
 				self::OPTION_NAME,
-				'wmw_listmonk_api_token_required',
+				'listmonk_api_token_required',
 				'Listmonk API credential is required and must use api_user:token format.',
 				'error'
 			);
 		} elseif ( ! $this->api_token_has_valid_format( $api_token ) ) {
 			add_settings_error(
 				self::OPTION_NAME,
-				'wmw_listmonk_api_token_format',
+				'listmonk_api_token_format',
 				'Listmonk API credential must use api_user:token format.',
 				'error'
 			);
@@ -169,7 +174,7 @@ final class WMW_Listmonk_Signup {
 		if ( '' === $list_ids ) {
 			add_settings_error(
 				self::OPTION_NAME,
-				'wmw_listmonk_list_ids_required',
+				'listmonk_list_ids_required',
 				'At least one numeric Listmonk list ID is required.',
 				'error'
 			);
@@ -188,7 +193,7 @@ final class WMW_Listmonk_Signup {
 	}
 
 	public function handle_clear_logs(): void {
-		if ( empty( $_POST['wmw_listmonk_clear_logs'] ) ) {
+		if ( empty( $_POST['listmonk_clear_logs'] ) ) {
 			return;
 		}
 
@@ -199,7 +204,7 @@ final class WMW_Listmonk_Signup {
 		check_admin_referer( self::CLEAR_LOGS_ACTION );
 		delete_option( self::LOG_OPTION_NAME );
 		delete_option( self::API_FAILURE_OPTION_NAME );
-		wp_safe_redirect( add_query_arg( 'wmw_listmonk_logs_cleared', '1', menu_page_url( 'wmw-listmonk-signup', false ) ) );
+		wp_safe_redirect( add_query_arg( 'listmonk_logs_cleared', '1', menu_page_url( 'listmonk-signup', false ) ) );
 		$this->terminate_request();
 	}
 
@@ -214,7 +219,7 @@ final class WMW_Listmonk_Signup {
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-			<?php if ( ! empty( $_GET['wmw_listmonk_logs_cleared'] ) ) : ?>
+			<?php if ( ! empty( $_GET['listmonk_logs_cleared'] ) ) : ?>
 				<div class="notice notice-success is-dismissible"><p>Listmonk Signup Logs und API-Hinweise wurden gelöscht.</p></div>
 			<?php endif; ?>
 			<?php if ( ! empty( $failures ) ) : ?>
@@ -229,38 +234,38 @@ final class WMW_Listmonk_Signup {
 				</div>
 			<?php endif; ?>
 			<form method="post" action="options.php">
-				<?php settings_fields( 'wmw_listmonk_signup' ); ?>
+				<?php settings_fields( 'listmonk_signup' ); ?>
 				<table class="form-table" role="presentation">
 					<tr>
-						<th scope="row"><label for="wmw-listmonk-base-url">Listmonk Base URL</label></th>
-						<td><input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[base_url]" id="wmw-listmonk-base-url" type="url" class="regular-text" value="<?php echo esc_attr( $settings['base_url'] ); ?>" required></td>
+						<th scope="row"><label for="listmonk-base-url">Listmonk Base URL</label></th>
+						<td><input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[base_url]" id="listmonk-base-url" type="url" class="regular-text" value="<?php echo esc_attr( $settings['base_url'] ); ?>" required></td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="wmw-listmonk-api-token">Listmonk API User + Token</label></th>
+						<th scope="row"><label for="listmonk-api-token">Listmonk API User + Token</label></th>
 						<td>
-							<input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[api_token]" id="wmw-listmonk-api-token" type="password" class="regular-text" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( empty( $settings['api_token'] ) ? 'api_user:token' : 'Gespeichert - leer lassen, um beizubehalten' ); ?>">
+							<input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[api_token]" id="listmonk-api-token" type="password" class="regular-text" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( empty( $settings['api_token'] ) ? 'api_user:token' : 'Gespeichert - leer lassen, um beizubehalten' ); ?>">
 							<p class="description">Erforderlich. Listmonk erwartet <code>api_user:token</code>, z. B. <code>newsletter_api:abc123...</code>. Die Anmeldung verwendet die authentifizierte Subscriber API, damit Attribute direkt gespeichert werden.</p>
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="wmw-listmonk-list-ids">Listen-IDs</label></th>
+						<th scope="row"><label for="listmonk-list-ids">Listen-IDs</label></th>
 						<td>
-							<textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[list_ids]" id="wmw-listmonk-list-ids" class="large-text code" rows="4" required><?php echo esc_textarea( $settings['list_ids'] ); ?></textarea>
+							<textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[list_ids]" id="listmonk-list-ids" class="large-text code" rows="4" required><?php echo esc_textarea( $settings['list_ids'] ); ?></textarea>
 							<p class="description">Eine numerische Listen-ID pro Zeile oder kommagetrennt. Standard: 3.</p>
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="wmw-listmonk-success-message">Erfolgsmeldung</label></th>
-						<td><input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[success_message]" id="wmw-listmonk-success-message" type="text" class="large-text" value="<?php echo esc_attr( $settings['success_message'] ); ?>"></td>
+						<th scope="row"><label for="listmonk-success-message">Erfolgsmeldung</label></th>
+						<td><input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[success_message]" id="listmonk-success-message" type="text" class="large-text" value="<?php echo esc_attr( $settings['success_message'] ); ?>"></td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="wmw-listmonk-error-message">Fehlermeldung</label></th>
-						<td><input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[error_message]" id="wmw-listmonk-error-message" type="text" class="large-text" value="<?php echo esc_attr( $settings['error_message'] ); ?>"></td>
+						<th scope="row"><label for="listmonk-error-message">Fehlermeldung</label></th>
+						<td><input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[error_message]" id="listmonk-error-message" type="text" class="large-text" value="<?php echo esc_attr( $settings['error_message'] ); ?>"></td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="wmw-listmonk-consent-text">Consent-Text</label></th>
+						<th scope="row"><label for="listmonk-consent-text">Consent-Text</label></th>
 						<td>
-							<textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[consent_text]" id="wmw-listmonk-consent-text" class="large-text" rows="5"><?php echo esc_textarea( $settings['consent_text'] ); ?></textarea>
+							<textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[consent_text]" id="listmonk-consent-text" class="large-text" rows="5"><?php echo esc_textarea( $settings['consent_text'] ); ?></textarea>
 							<p class="description">Sicheres HTML wie Links ist erlaubt.</p>
 						</td>
 					</tr>
@@ -298,9 +303,9 @@ final class WMW_Listmonk_Signup {
 						<?php endforeach; ?>
 					</tbody>
 				</table>
-				<form method="post" action="<?php echo esc_url( admin_url( 'options-general.php?page=wmw-listmonk-signup' ) ); ?>" style="margin-top:1rem;">
+				<form method="post" action="<?php echo esc_url( admin_url( 'options-general.php?page=listmonk-signup' ) ); ?>" style="margin-top:1rem;">
 					<?php wp_nonce_field( self::CLEAR_LOGS_ACTION ); ?>
-					<button class="button" type="submit" name="wmw_listmonk_clear_logs" value="1">Logs löschen</button>
+					<button class="button" type="submit" name="listmonk_clear_logs" value="1">Logs löschen</button>
 				</form>
 			<?php endif; ?>
 		</div>
@@ -373,48 +378,48 @@ final class WMW_Listmonk_Signup {
 
 		ob_start();
 		?>
-		<form class="wmw-listmonk-signup" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<form class="listmonk-signup" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<?php if ( ! empty( $submission_result['message'] ) ) : ?>
-				<div class="wmw-listmonk-signup__message wmw-listmonk-signup__message--<?php echo esc_attr( $submission_result['type'] ); ?>" role="status">
+				<div class="listmonk-signup__message listmonk-signup__message--<?php echo esc_attr( $submission_result['type'] ); ?>" role="status">
 					<?php echo esc_html( $submission_result['message'] ); ?>
 				</div>
 			<?php endif; ?>
 
-			<section class="wmw-listmonk-signup__step">
+			<section class="listmonk-signup__step">
 				<h2><span>1</span>E-Mail</h2>
-				<p class="wmw-listmonk-signup__field">
-					<label for="wmw-listmonk-email">E-Mail-Adresse *</label>
-					<input id="wmw-listmonk-email" name="email" type="email" value="<?php echo esc_attr( $values['email'] ); ?>" autocomplete="email" required>
+				<p class="listmonk-signup__field">
+					<label for="listmonk-email">E-Mail-Adresse *</label>
+					<input id="listmonk-email" name="email" type="email" value="<?php echo esc_attr( $values['email'] ); ?>" autocomplete="email" required>
 				</p>
 			</section>
 
-			<section class="wmw-listmonk-signup__step wmw-listmonk-signup__details">
+			<section class="listmonk-signup__step listmonk-signup__details">
 				<h2><span>2</span>Optional: Wie sollen wir dich ansprechen?</h2>
 
-				<div class="wmw-listmonk-signup__grid">
-					<p class="wmw-listmonk-signup__field">
-						<label for="wmw-listmonk-anrede">Anrede</label>
-						<input id="wmw-listmonk-anrede" name="anrede" type="text" value="<?php echo esc_attr( $values['anrede'] ); ?>" placeholder="Liebe" autocomplete="honorific-prefix">
+				<div class="listmonk-signup__grid">
+					<p class="listmonk-signup__field">
+						<label for="listmonk-anrede">Anrede</label>
+						<input id="listmonk-anrede" name="anrede" type="text" value="<?php echo esc_attr( $values['anrede'] ); ?>" placeholder="Liebe" autocomplete="honorific-prefix">
 					</p>
 
-					<p class="wmw-listmonk-signup__field">
-						<label for="wmw-listmonk-vorname">Vorname</label>
-						<input id="wmw-listmonk-vorname" name="vorname" type="text" value="<?php echo esc_attr( $values['vorname'] ); ?>" autocomplete="given-name">
+					<p class="listmonk-signup__field">
+						<label for="listmonk-vorname">Vorname</label>
+						<input id="listmonk-vorname" name="vorname" type="text" value="<?php echo esc_attr( $values['vorname'] ); ?>" autocomplete="given-name">
 					</p>
 
-					<p class="wmw-listmonk-signup__field">
-						<label for="wmw-listmonk-nachname">Nachname</label>
-						<input id="wmw-listmonk-nachname" name="nachname" type="text" value="<?php echo esc_attr( $values['nachname'] ); ?>" autocomplete="family-name">
+					<p class="listmonk-signup__field">
+						<label for="listmonk-nachname">Nachname</label>
+						<input id="listmonk-nachname" name="nachname" type="text" value="<?php echo esc_attr( $values['nachname'] ); ?>" autocomplete="family-name">
 					</p>
 				</div>
 			</section>
 
-			<fieldset class="wmw-listmonk-signup__step wmw-listmonk-signup__districts">
+			<fieldset class="listmonk-signup__step listmonk-signup__districts">
 				<legend><span>3</span>Optional: Welche Bezirke interessieren dich?</legend>
-				<p class="wmw-listmonk-signup__hint">Wenn du einen oder mehrere Bezirke auswählst, stimmst du zu, dass wir deine E-Mail-Adresse verwenden dürfen, um dir in Zukunft Informationen zu lokalen Initiativen in diesen Bezirken zu schicken.</p>
-				<div class="wmw-listmonk-signup__district-grid">
+				<p class="listmonk-signup__hint">Wenn du einen oder mehrere Bezirke auswählst, stimmst du zu, dass wir deine E-Mail-Adresse verwenden dürfen, um dir in Zukunft Informationen zu lokalen Initiativen in diesen Bezirken zu schicken.</p>
+				<div class="listmonk-signup__district-grid">
 					<?php foreach ( $districts as $district_id => $district_label ) : ?>
-						<label class="wmw-listmonk-signup__district">
+						<label class="listmonk-signup__district">
 							<input name="bezirke[]" type="checkbox" value="<?php echo esc_attr( $district_id ); ?>" <?php checked( in_array( $district_id, $values['bezirke'], true ) ); ?>>
 							<span><?php echo esc_html( $district_label ); ?></span>
 						</label>
@@ -422,9 +427,9 @@ final class WMW_Listmonk_Signup {
 				</div>
 			</fieldset>
 
-			<section class="wmw-listmonk-signup__step">
+			<section class="listmonk-signup__step">
 				<h2><span>4</span>Zustimmung</h2>
-				<p class="wmw-listmonk-signup__field wmw-listmonk-signup__field--consent">
+				<p class="listmonk-signup__field listmonk-signup__field--consent">
 					<label>
 						<input name="consent" type="checkbox" value="1" required>
 						<span><?php echo wp_kses_post( $settings['consent_text'] ); ?></span>
@@ -432,17 +437,17 @@ final class WMW_Listmonk_Signup {
 				</p>
 			</section>
 
-			<p class="wmw-listmonk-signup__field wmw-listmonk-signup__field--hp" aria-hidden="true">
-				<label for="wmw-listmonk-website">Website</label>
-				<input id="wmw-listmonk-website" name="website" type="text" value="" tabindex="-1" autocomplete="off">
+			<p class="listmonk-signup__field listmonk-signup__field--hp" aria-hidden="true">
+				<label for="listmonk-website">Website</label>
+				<input id="listmonk-website" name="website" type="text" value="" tabindex="-1" autocomplete="off">
 			</p>
 
 			<?php wp_nonce_field( self::NONCE_ACTION, self::NONCE_NAME ); ?>
 			<input type="hidden" name="<?php echo esc_attr( self::SUBMISSION_TOKEN_NAME ); ?>" value="<?php echo esc_attr( $submission_token ); ?>">
 			<input type="hidden" name="action" value="<?php echo esc_attr( self::SUBMISSION_ACTION ); ?>">
 			<input type="hidden" name="return_to" value="<?php echo esc_url( get_permalink() ); ?>">
-			<input type="hidden" name="wmw_listmonk_signup_submit" value="1">
-			<section class="wmw-listmonk-signup__step wmw-listmonk-signup__step--submit">
+			<input type="hidden" name="listmonk_signup_submit" value="1">
+			<section class="listmonk-signup__step listmonk-signup__step--submit">
 				<h2><span>5</span>Jetzt abschicken!</h2>
 				<button type="submit">Newsletter abonnieren</button>
 			</section>
@@ -454,7 +459,7 @@ final class WMW_Listmonk_Signup {
 
 	private function enqueue_shortcode_assets(): void {
 		wp_enqueue_style(
-			'wmw-listmonk-signup',
+			'listmonk-signup',
 			plugins_url( 'assets/listmonk-signup.css', __FILE__ ),
 			[],
 			'1.0.0'
@@ -494,11 +499,11 @@ final class WMW_Listmonk_Signup {
 	}
 
 	private function terminate_request(): void {
-		if ( apply_filters( 'wmw_listmonk_signup_should_exit', true ) ) {
+		if ( apply_filters( 'listmonk_signup_should_exit', true ) ) {
 			exit;
 		}
 
-		throw new RuntimeException( 'WMW Listmonk Signup request terminated.' );
+		throw new RuntimeException( 'Listmonk Signup request terminated.' );
 	}
 
 	private function consume_submission_result(): array {
@@ -660,7 +665,7 @@ final class WMW_Listmonk_Signup {
 					'body'       => $this->debug_body_snippet( wp_remote_retrieve_body( $response ) ),
 				]
 			);
-			return new WP_Error( 'wmw_listmonk_subscriber_api_failed', 'Listmonk subscriber API failed.' );
+			return new WP_Error( 'listmonk_subscriber_api_failed', 'Listmonk subscriber API failed.' );
 		}
 
 		return true;
@@ -751,7 +756,7 @@ final class WMW_Listmonk_Signup {
 			$message .= ' ' . wp_json_encode( $context );
 		}
 
-		error_log( '[WMW Listmonk Signup] ' . $message );
+		error_log( '[Listmonk Signup] ' . $message );
 	}
 
 	private function store_log_entry( string $message, array $context = [] ): void {
@@ -853,8 +858,8 @@ final class WMW_Listmonk_Signup {
 
 	private function is_rate_limited( string $email ): bool {
 		$client_ip          = $this->client_ip();
-		$email_ip_key       = 'wmw_listmonk_signup_email_ip_' . hash( 'sha256', $client_ip . '|' . strtolower( $email ) );
-		$ip_key             = 'wmw_listmonk_signup_ip_' . hash( 'sha256', $client_ip );
+		$email_ip_key       = 'listmonk_signup_email_ip_' . hash( 'sha256', $client_ip . '|' . strtolower( $email ) );
+		$ip_key             = 'listmonk_signup_ip_' . hash( 'sha256', $client_ip );
 		$email_ip_count     = (int) get_transient( $email_ip_key );
 		$ip_count           = (int) get_transient( $ip_key );
 
@@ -891,5 +896,5 @@ final class WMW_Listmonk_Signup {
 	}
 }
 
-register_activation_hook( __FILE__, [ 'WMW_Listmonk_Signup', 'activate' ] );
-WMW_Listmonk_Signup::instance();
+register_activation_hook( __FILE__, [ 'Listmonk_Signup', 'activate' ] );
+Listmonk_Signup::instance();

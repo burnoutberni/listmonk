@@ -1,6 +1,6 @@
 {
-  "name": "wirmachenwien/listmonk-signup-wordpress",
-  "description": "WordPress plugin tests for the Wir machen Wien Listmonk signup plugin.",
+  "name": "burnoutberni/listmonk-signup-wordpress",
+  "description": "WordPress plugin tests for the Listmonk Signup plugin.",
   "type": "project",
   "license": "AGPL-3.0-or-later",
   "require-dev": {

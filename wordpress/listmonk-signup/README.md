@@ -1,16 +1,18 @@
-# Wir machen Wien Listmonk Signup Plugin
+# Listmonk Signup Plugin
 
-Small site-specific WordPress plugin that provides the `[listmonk_signup]` shortcode.
+Small WordPress plugin that provides the `[listmonk_signup]` shortcode for Listmonk-backed newsletter signups.
+
+The WordPress.org plugin metadata lives in `readme.txt`.
 
 ## Installation
 
-Copy `wordpress/listmonk-signup/` to `wp-content/plugins/listmonk-signup/`, then activate **Wir machen Wien Listmonk Signup** in WordPress.
+Copy `wordpress/listmonk-signup/` to `wp-content/plugins/listmonk-signup/`, then activate **Listmonk Signup** in WordPress.
 
 ## Configuration
 
 Open **Settings > Listmonk Signup** and configure:
 
-- Listmonk base URL, for example `https://newsletter.wirmachen.wien`
+- Listmonk base URL, for example `https://newsletter.example.com`
 - Listmonk API credential in `api_user:token` format. A token alone is not enough for Listmonk's Authorization header.
 - Numeric List IDs, one per line or comma-separated
 - Success message, error message, and consent text
