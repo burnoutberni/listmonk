@@ -1,3 +1,10 @@
 scripts/contacts/
 __pycache__/
 *.py[cod]
+listmonk-signup.zip
+wordpress/listmonk-signup.zip
+.DS_Store
+.phpunit.result.cache
+wordpress/vendor/
+wordpress/.phpunit.result.cache
+wordpress/wordpress-tests-lib/

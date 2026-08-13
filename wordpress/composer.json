@@ -1,0 +1,21 @@
+{
+  "name": "wirmachenwien/listmonk-signup-wordpress",
+  "description": "WordPress plugin tests for the Wir machen Wien Listmonk signup plugin.",
+  "type": "project",
+  "license": "AGPL-3.0-or-later",
+  "require-dev": {
+    "phpunit/phpunit": "^9.6",
+    "yoast/phpunit-polyfills": "^2.0"
+  },
+  "scripts": {
+    "build:zip": "rm -f listmonk-signup.zip && zip -r listmonk-signup.zip listmonk-signup",
+    "test": "phpunit",
+    "test:docker": "tests/bin/test-docker.sh",
+    "test:plugin": "phpunit --testsuite listmonk-signup",
+    "lint:php": "php -l listmonk-signup/listmonk-signup.php"
+  },
+  "config": {
+    "allow-plugins": false,
+    "sort-packages": true
+  }
+}

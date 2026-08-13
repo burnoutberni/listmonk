@@ -6,6 +6,7 @@ Configuration, templates, assets, and helper scripts for the Wir machen Wien Lis
 
 - `listmonk/`: Deployable Listmonk customizations, templates, public assets, and visual template source.
 - `scripts/`: Helper scripts for one-off maintenance and migration tasks.
+- `wordpress/listmonk-signup/`: Site-specific WordPress shortcode plugin for Listmonk newsletter signups.
 - `legacy/brevo/`: Original Brevo exports kept only as historical source material.
 
 ## Deployable Listmonk Files
@@ -38,3 +39,11 @@ python3 convert_contacts.py contacts/data.csv
 ```
 
 Generated contact CSVs are written to `scripts/contacts/`. That folder is ignored by git because it contains private subscriber data.
+
+## Contributors
+
+- Bernhard Hayden
+
+## License
+
+This project is licensed under the GNU Affero General Public License v3.0 or later. See `LICENSE`.
