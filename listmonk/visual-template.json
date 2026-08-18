@@ -10,10 +10,17 @@
         "block-fonts",
         "block-browser-link",
         "block-header-logo",
-        "block-intro-container",
-        "block-section-1-container",
-        "block-donation-container",
-        "block-outro-container",
+        "block-greeting",
+        "block-intro",
+        "block-section-1-divider",
+        "block-section-1-heading",
+        "block-section-1-image",
+        "block-section-1-text",
+        "block-section-1-button",
+        "block-donation-divider",
+        "block-donation-text",
+        "block-outro-divider",
+        "block-closing",
         "block-footer-heading",
         "block-social-columns",
         "block-footer-links"
@@ -84,25 +91,6 @@
       }
     }
   },
-  "block-intro-container": {
-    "type": "Container",
-    "data": {
-      "style": {
-        "padding": {
-          "top": 24,
-          "bottom": 0,
-          "right": 24,
-          "left": 24
-        }
-      },
-      "props": {
-        "childrenIds": [
-          "block-greeting",
-          "block-intro"
-        ]
-      }
-    }
-  },
   "block-greeting": {
     "type": "Text",
     "data": {
@@ -110,10 +98,10 @@
         "fontSize": 20,
         "fontWeight": "normal",
         "padding": {
-          "top": 0,
+          "top": 24,
           "bottom": 0,
-          "right": 0,
-          "left": 0
+          "right": 24,
+          "left": 24
         }
       },
       "props": {
@@ -131,8 +119,8 @@
         "padding": {
           "top": 0,
           "bottom": 0,
-          "right": 0,
-          "left": 0
+          "right": 24,
+          "left": 24
         }
       },
       "props": {
@@ -148,34 +136,12 @@
         "padding": {
           "top": 0,
           "bottom": 16,
-          "right": 0,
-          "left": 0
-        }
-      },
-      "props": {
-        "contents": "<h1 style=\"margin:0;color:#140958;font-family:Bangers, Impact, Arial Black, Arial, sans-serif;font-size:32px;font-weight:400;letter-spacing:.1em;line-height:1.2;\">Jetzt mitreden für eine bessere Taborstrasse!</h1>"
-      }
-    }
-  },
-  "block-section-1-container": {
-    "type": "Container",
-    "data": {
-      "style": {
-        "padding": {
-          "top": 0,
-          "bottom": 0,
           "right": 24,
           "left": 24
         }
       },
       "props": {
-        "childrenIds": [
-          "block-section-1-divider",
-          "block-section-1-heading",
-          "block-section-1-image",
-          "block-section-1-text",
-          "block-section-1-button"
-        ]
+        "contents": "<h1 style=\"margin:0;color:#140958;font-family:Bangers, Impact, Arial Black, Arial, sans-serif;font-size:32px;font-weight:400;letter-spacing:.1em;line-height:1.2;\">Jetzt mitreden für eine bessere Taborstrasse!</h1>"
       }
     }
   },
@@ -186,8 +152,8 @@
         "padding": {
           "top": 0,
           "bottom": 16,
-          "right": 0,
-          "left": 0
+          "right": 24,
+          "left": 24
         }
       },
       "props": {
@@ -210,8 +176,8 @@
         "padding": {
           "top": 4,
           "bottom": 4,
-          "right": 0,
-          "left": 0
+          "right": 24,
+          "left": 24
         }
       },
       "props": {
@@ -230,8 +196,8 @@
         "padding": {
           "top": 8,
           "bottom": 8,
-          "right": 0,
-          "left": 0
+          "right": 24,
+          "left": 24
         }
       },
       "props": {
@@ -244,25 +210,6 @@
       }
     }
   },
-  "block-donation-container": {
-    "type": "Container",
-    "data": {
-      "style": {
-        "padding": {
-          "top": 0,
-          "bottom": 0,
-          "right": 24,
-          "left": 24
-        }
-      },
-      "props": {
-        "childrenIds": [
-          "block-donation-divider",
-          "block-donation-text"
-        ]
-      }
-    }
-  },
   "block-donation-divider": {
     "type": "Divider",
     "data": {
@@ -270,8 +217,8 @@
         "padding": {
           "top": 25,
           "bottom": 25,
-          "right": 0,
-          "left": 0
+          "right": 24,
+          "left": 24
         }
       },
       "props": {
@@ -288,32 +235,13 @@
         "padding": {
           "top": 0,
           "bottom": 0,
-          "right": 0,
-          "left": 0
-        }
-      },
-      "props": {
-        "markdown": true,
-        "text": "Damit wir weiter recherchieren, informieren und Menschen für eine lebenswertere Stadt mobilisieren können, **brauchen wir deine Unterstützung.**\n\nSchon **ein kleiner monatlicher Beitrag** hilft uns, unabhängig zu bleiben und Kampagnen wie diese langfristig weiterzuführen.\n\n[**>> Unterstütze #WirMachenWien mit deiner Spende!**](https://wirmachen.wien/spenden)"
-      }
-    }
-  },
-  "block-outro-container": {
-    "type": "Container",
-    "data": {
-      "style": {
-        "padding": {
-          "top": 0,
-          "bottom": 0,
           "right": 24,
           "left": 24
         }
       },
       "props": {
-        "childrenIds": [
-          "block-outro-divider",
-          "block-closing"
-        ]
+        "markdown": true,
+        "text": "Damit wir weiter recherchieren, informieren und Menschen für eine lebenswertere Stadt mobilisieren können, **brauchen wir deine Unterstützung.**\n\nSchon **ein kleiner monatlicher Beitrag** hilft uns, unabhängig zu bleiben und Kampagnen wie diese langfristig weiterzuführen.\n\n[**>> Unterstütze #WirMachenWien mit deiner Spende!**](https://wirmachen.wien/spenden)"
       }
     }
   },
@@ -324,8 +252,8 @@
         "padding": {
           "top": 25,
           "bottom": 25,
-          "right": 0,
-          "left": 0
+          "right": 24,
+          "left": 24
         }
       },
       "props": {
@@ -342,8 +270,8 @@
         "padding": {
           "top": 0,
           "bottom": 25,
-          "right": 0,
-          "left": 0
+          "right": 24,
+          "left": 24
         }
       },
       "props": {
@@ -476,8 +404,8 @@
         "padding": {
           "top": 25,
           "bottom": 25,
-          "right": 0,
-          "left": 0
+          "right": 24,
+          "left": 24
         }
       },
       "props": {
