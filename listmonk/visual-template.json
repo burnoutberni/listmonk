@@ -141,7 +141,7 @@
         }
       },
       "props": {
-        "contents": "<h1 style=\"margin:0;color:#140958;font-family:Bangers, Impact, Arial Black, Arial, sans-serif;font-size:32px;font-weight:400;letter-spacing:.1em;line-height:1.2;\">Jetzt mitreden für eine bessere Taborstrasse!</h1>"
+        "contents": "<h1 style=\"margin:0;color:#140958;font-family:Bangers, Arial Black, Arial, sans-serif;font-size:32px;font-weight:400;letter-spacing:.05em;line-height:1.2;\">Jetzt mitreden für eine bessere Taborstrasse!</h1>"
       }
     }
   },
@@ -293,7 +293,7 @@
         }
       },
       "props": {
-        "contents": "<h1 style=\"margin:0;color:#ffffff;text-align:center;font-family:Bangers, Impact, Arial Black, Arial, sans-serif;font-size:32px;font-weight:400;letter-spacing:.1em;line-height:1.2;\">Folge uns auf</h1>"
+        "contents": "<h1 style=\"margin:0;color:#ffffff;text-align:center;font-family:Bangers, Arial Black, Arial, sans-serif;font-size:32px;font-weight:400;letter-spacing:.05em;line-height:1.2;\">Folge uns auf</h1>"
       }
     }
   },
