@@ -62,6 +62,9 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 
 		$settings = get_option( 'listmonk_signup_settings' );
 		$this->assertSame( 'https://newsletter.example.com', $settings['base_url'] );
+		$this->assertArrayNotHasKey( 'success_message', $settings );
+		$this->assertArrayNotHasKey( 'error_message', $settings );
+		$this->assertArrayNotHasKey( 'consent_text', $settings );
 
 		$settings['base_url'] = 'https://example.test';
 		update_option( 'listmonk_signup_settings', $settings );

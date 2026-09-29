@@ -62,7 +62,10 @@ final class Listmonk_Signup {
 
 	public static function activate(): void {
 		if ( false === get_option( self::OPTION_NAME, false ) ) {
-			add_option( self::OPTION_NAME, self::defaults() );
+			$defaults = self::defaults();
+			unset( $defaults['success_message'], $defaults['error_message'], $defaults['consent_text'] );
+
+			add_option( self::OPTION_NAME, $defaults );
 		}
 	}
 
