@@ -58,6 +58,10 @@ Use the Listmonk API credential in `api_user:token` format.
 
 = 1.1.1 =
 * Internationalized plugin strings and added German translations.
+* Returned REST submission statuses so the frontend can show the real result of each signup.
+* Handled duplicate subscriber conflicts safely by recovering existing subscriber state instead of failing the signup.
+* Removed the unused signup redirect helper.
+* Skipped transient writes for pre-auth signup failures such as invalid nonce or submission tokens.
 
 = 1.1.0 =
 * Improved signup submission handling and frontend REST-based flow.
@@ -70,7 +74,7 @@ Use the Listmonk API credential in `api_user:token` format.
 == Upgrade Notice ==
 
 = 1.1.1 =
-Adds WordPress translation support and German language files.
+Adds WordPress translation support and German language files, plus safer handling of duplicate subscribers and failed signup attempts.
 
 = 1.1.0 =
 Includes substantial signup flow, security, logging, and test coverage improvements. Review settings after updating and clear temporary debug logs if enabled.
