@@ -10,6 +10,13 @@ jobs:
   wordpress-plugin:
     runs-on: ubuntu-latest
 
+    env:
+      WP_TESTS_DB_NAME: wordpress_test
+      WP_TESTS_DB_USER: root
+      WP_TESTS_DB_PASS: ''
+      WP_TESTS_DB_HOST: 127.0.0.1
+      WP_TESTS_SKIP_DB_CREATE: true
+
     services:
       mysql:
         image: mysql:8.4
