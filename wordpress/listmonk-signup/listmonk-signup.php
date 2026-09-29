@@ -771,15 +771,13 @@ final class Listmonk_Signup {
 		);
 
 		if ( $code < 200 || $code >= 300 ) {
-			if ( 409 === $code && $this->response_body_indicates_duplicate_subscriber( wp_remote_retrieve_body( $response ) ) ) {
-				$this->debug_log(
-					'Subscriber API reported existing subscriber; treating signup as successful.',
-					[
-						'request_id' => $request_id,
-						'http_code'  => $code,
-					]
-				);
-				return true;
+			if ( 409 === $code ) {
+				$recovery = $this->recover_existing_subscriber_signup( $settings, $list_ids, $values, $request_id );
+				if ( true === $recovery ) {
+					return true;
+				}
+
+				return $recovery;
 			}
 
 			$this->record_api_failure(
@@ -797,11 +795,385 @@ final class Listmonk_Signup {
 		return true;
 	}
 
-	private function response_body_indicates_duplicate_subscriber( string $body ): bool {
-		$decoded = json_decode( $body, true );
-		$message = is_array( $decoded ) && isset( $decoded['message'] ) ? (string) $decoded['message'] : $body;
+	private function recover_existing_subscriber_signup( array $settings, array $list_ids, array $values, string $request_id = '' ) {
+		$this->debug_log(
+			'Subscriber API reported conflict; verifying existing subscriber state.',
+			[
+				'request_id' => $request_id,
+				'list_count' => count( $list_ids ),
+			]
+		);
 
-		return (bool) preg_match( '/(existiert bereits|exists already|already exists|duplicate)/i', $message );
+		$subscriber = $this->find_listmonk_subscriber_by_email( $settings, $values['email'], $request_id );
+		if ( is_wp_error( $subscriber ) ) {
+			return $subscriber;
+		}
+
+		$subscriber_id = isset( $subscriber['id'] ) ? absint( $subscriber['id'] ) : 0;
+		if ( $subscriber_id < 1 ) {
+			return $this->listmonk_recovery_error(
+				'Listmonk Subscriber API conflict recovery failed: subscriber ID missing.',
+				[
+					'email'      => $values['email'],
+					'request_id' => $request_id,
+				]
+			);
+		}
+
+		$current_list_ids = $this->subscriber_list_ids( $subscriber );
+		$missing_list_ids = array_values( array_diff( $list_ids, $current_list_ids ) );
+
+		if ( empty( $missing_list_ids ) ) {
+			if ( $this->subscriber_needs_optin_for_lists( $subscriber, $list_ids ) ) {
+				$optin = $this->send_subscriber_optin( $settings, $subscriber_id, $values['email'], $request_id );
+				if ( is_wp_error( $optin ) ) {
+					return $optin;
+				}
+			}
+
+			$this->debug_log(
+				'Existing subscriber already has requested list memberships; treating signup as successful.',
+				[
+					'request_id'    => $request_id,
+					'subscriber_id' => $subscriber_id,
+					'list_count'    => count( $list_ids ),
+				]
+			);
+			return true;
+		}
+
+		$list_optins = $this->list_optins_by_id( $settings, $missing_list_ids, $values['email'], $request_id );
+		if ( is_wp_error( $list_optins ) ) {
+			return $list_optins;
+		}
+
+		$single_optin_list_ids = [];
+		$double_optin_list_ids = [];
+		foreach ( $missing_list_ids as $list_id ) {
+			if ( 'double' === ( $list_optins[ $list_id ] ?? '' ) ) {
+				$double_optin_list_ids[] = $list_id;
+			} else {
+				$single_optin_list_ids[] = $list_id;
+			}
+		}
+
+		if ( ! empty( $single_optin_list_ids ) ) {
+			$added = $this->add_subscriber_to_lists( $settings, $subscriber_id, $single_optin_list_ids, 'confirmed', $values['email'], $request_id );
+			if ( is_wp_error( $added ) ) {
+				return $added;
+			}
+		}
+
+		if ( ! empty( $double_optin_list_ids ) ) {
+			$added = $this->add_subscriber_to_lists( $settings, $subscriber_id, $double_optin_list_ids, 'unconfirmed', $values['email'], $request_id );
+			if ( is_wp_error( $added ) ) {
+				return $added;
+			}
+
+			$optin = $this->send_subscriber_optin( $settings, $subscriber_id, $values['email'], $request_id );
+			if ( is_wp_error( $optin ) ) {
+				return $optin;
+			}
+		}
+
+		return true;
+	}
+
+	private function find_listmonk_subscriber_by_email( array $settings, string $email, string $request_id = '' ) {
+		$response = wp_remote_request(
+			add_query_arg(
+				[
+					'search'   => $email,
+					'per_page' => 'all',
+				],
+				trailingslashit( $settings['base_url'] ) . 'api/subscribers'
+			),
+			[
+				'method'  => 'GET',
+				'timeout' => 15,
+				'headers' => $this->api_headers( $settings ),
+			]
+		);
+
+		if ( is_wp_error( $response ) ) {
+			$this->record_api_failure(
+				'Listmonk Subscriber Lookup API fehlgeschlagen: ' . $response->get_error_message(),
+				[
+					'email'      => $email,
+					'request_id' => $request_id,
+				]
+			);
+			return $response;
+		}
+
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		$this->debug_log(
+			'Subscriber lookup API response.',
+			[
+				'request_id' => $request_id,
+				'http_code'  => $code,
+			]
+		);
+
+		if ( $code < 200 || $code >= 300 ) {
+			return $this->listmonk_recovery_error(
+				'Listmonk Subscriber Lookup API hat einen Fehlerstatus zurückgegeben.',
+				[
+					'email'      => $email,
+					'http_code'  => $code,
+					'request_id' => $request_id,
+					'body'       => $this->debug_body_snippet( wp_remote_retrieve_body( $response ) ),
+				]
+			);
+		}
+
+		$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
+		$results = $decoded['data']['results'] ?? [];
+		if ( ! is_array( $results ) ) {
+			$results = [];
+		}
+
+		foreach ( $results as $subscriber ) {
+			if ( is_array( $subscriber ) && isset( $subscriber['email'] ) && strtolower( (string) $subscriber['email'] ) === strtolower( $email ) ) {
+				return $subscriber;
+			}
+		}
+
+		return $this->listmonk_recovery_error(
+			'Listmonk Subscriber API conflict recovery failed: exact subscriber not found.',
+			[
+				'email'      => $email,
+				'request_id' => $request_id,
+			]
+		);
+	}
+
+	private function subscriber_list_ids( array $subscriber ): array {
+		$lists = $subscriber['lists'] ?? [];
+		if ( is_string( $lists ) ) {
+			$decoded = json_decode( $lists, true );
+			$lists   = is_array( $decoded ) ? $decoded : [];
+		}
+
+		$list_ids = [];
+		foreach ( is_array( $lists ) ? $lists : [] as $list ) {
+			if ( is_array( $list ) && isset( $list['id'] ) ) {
+				$list_ids[] = absint( $list['id'] );
+			} elseif ( is_numeric( $list ) ) {
+				$list_ids[] = absint( $list );
+			}
+		}
+
+		return array_values( array_unique( array_filter( $list_ids ) ) );
+	}
+
+	private function subscriber_needs_optin_for_lists( array $subscriber, array $list_ids ): bool {
+		$lists = $subscriber['lists'] ?? [];
+		if ( is_string( $lists ) ) {
+			$decoded = json_decode( $lists, true );
+			$lists   = is_array( $decoded ) ? $decoded : [];
+		}
+
+		foreach ( is_array( $lists ) ? $lists : [] as $list ) {
+			if ( ! is_array( $list ) || ! isset( $list['id'] ) || ! in_array( absint( $list['id'] ), $list_ids, true ) ) {
+				continue;
+			}
+
+			if ( 'double' === ( $list['optin'] ?? '' ) && 'unconfirmed' === ( $list['subscription_status'] ?? '' ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private function list_optins_by_id( array $settings, array $list_ids, string $email, string $request_id = '' ) {
+		$response = wp_remote_request(
+			add_query_arg(
+				[
+					'per_page' => 'all',
+					'minimal'  => 'true',
+				],
+				trailingslashit( $settings['base_url'] ) . 'api/lists'
+			),
+			[
+				'method'  => 'GET',
+				'timeout' => 15,
+				'headers' => $this->api_headers( $settings ),
+			]
+		);
+
+		if ( is_wp_error( $response ) ) {
+			$this->record_api_failure(
+				'Listmonk Lists API fehlgeschlagen: ' . $response->get_error_message(),
+				[
+					'email'      => $email,
+					'request_id' => $request_id,
+				]
+			);
+			return $response;
+		}
+
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		$this->debug_log(
+			'Lists API response.',
+			[
+				'request_id' => $request_id,
+				'http_code'  => $code,
+			]
+		);
+
+		if ( $code < 200 || $code >= 300 ) {
+			return $this->listmonk_recovery_error(
+				'Listmonk Lists API hat einen Fehlerstatus zurückgegeben.',
+				[
+					'email'      => $email,
+					'http_code'  => $code,
+					'request_id' => $request_id,
+					'body'       => $this->debug_body_snippet( wp_remote_retrieve_body( $response ) ),
+				]
+			);
+		}
+
+		$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
+		$results = $decoded['data']['results'] ?? [];
+		if ( ! is_array( $results ) ) {
+			$results = [];
+		}
+
+		$optins = [];
+		foreach ( $results as $list ) {
+			if ( is_array( $list ) && isset( $list['id'], $list['optin'] ) ) {
+				$optins[ absint( $list['id'] ) ] = (string) $list['optin'];
+			}
+		}
+
+		$missing_optin_ids = array_values( array_diff( $list_ids, array_keys( $optins ) ) );
+		if ( ! empty( $missing_optin_ids ) ) {
+			return $this->listmonk_recovery_error(
+				'Listmonk Subscriber API conflict recovery failed: target list opt-in metadata missing.',
+				[
+					'email'      => $email,
+					'request_id' => $request_id,
+					'list_count' => count( $missing_optin_ids ),
+				]
+			);
+		}
+
+		return $optins;
+	}
+
+	private function add_subscriber_to_lists( array $settings, int $subscriber_id, array $list_ids, string $status, string $email, string $request_id = '' ) {
+		$response = wp_remote_request(
+			trailingslashit( $settings['base_url'] ) . 'api/subscribers/lists',
+			[
+				'method'  => 'PUT',
+				'timeout' => 15,
+				'headers' => $this->api_headers( $settings ),
+				'body'    => wp_json_encode(
+					[
+						'ids'             => [ $subscriber_id ],
+						'action'          => 'add',
+						'target_list_ids' => array_values( $list_ids ),
+						'status'          => $status,
+					]
+				),
+			]
+		);
+
+		if ( is_wp_error( $response ) ) {
+			$this->record_api_failure(
+				'Listmonk Subscriber Lists API fehlgeschlagen: ' . $response->get_error_message(),
+				[
+					'email'         => $email,
+					'request_id'    => $request_id,
+					'subscriber_id' => $subscriber_id,
+				]
+			);
+			return $response;
+		}
+
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		$this->debug_log(
+			'Subscriber lists API response.',
+			[
+				'request_id'         => $request_id,
+				'http_code'          => $code,
+				'subscriber_id'      => $subscriber_id,
+				'missing_list_count' => count( $list_ids ),
+				'status'             => $status,
+			]
+		);
+
+		if ( $code < 200 || $code >= 300 ) {
+			return $this->listmonk_recovery_error(
+				'Listmonk Subscriber Lists API hat einen Fehlerstatus zurückgegeben.',
+				[
+					'email'         => $email,
+					'http_code'     => $code,
+					'request_id'    => $request_id,
+					'subscriber_id' => $subscriber_id,
+					'body'          => $this->debug_body_snippet( wp_remote_retrieve_body( $response ) ),
+				]
+			);
+		}
+
+		return true;
+	}
+
+	private function send_subscriber_optin( array $settings, int $subscriber_id, string $email, string $request_id = '' ) {
+		$response = wp_remote_request(
+			trailingslashit( $settings['base_url'] ) . 'api/subscribers/' . $subscriber_id . '/optin',
+			[
+				'method'  => 'POST',
+				'timeout' => 15,
+				'headers' => $this->api_headers( $settings ),
+				'body'    => '{}',
+			]
+		);
+
+		if ( is_wp_error( $response ) ) {
+			$this->record_api_failure(
+				'Listmonk Subscriber Opt-in API fehlgeschlagen: ' . $response->get_error_message(),
+				[
+					'email'         => $email,
+					'request_id'    => $request_id,
+					'subscriber_id' => $subscriber_id,
+				]
+			);
+			return $response;
+		}
+
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		$this->debug_log(
+			'Subscriber opt-in API response.',
+			[
+				'request_id'    => $request_id,
+				'http_code'     => $code,
+				'subscriber_id' => $subscriber_id,
+			]
+		);
+
+		if ( $code < 200 || $code >= 300 ) {
+			return $this->listmonk_recovery_error(
+				'Listmonk Subscriber Opt-in API hat einen Fehlerstatus zurückgegeben.',
+				[
+					'email'         => $email,
+					'http_code'     => $code,
+					'request_id'    => $request_id,
+					'subscriber_id' => $subscriber_id,
+					'body'          => $this->debug_body_snippet( wp_remote_retrieve_body( $response ) ),
+				]
+			);
+		}
+
+		return true;
+	}
+
+	private function listmonk_recovery_error( string $message, array $context = [] ): WP_Error {
+		$this->record_api_failure( $message, $context );
+
+		return new WP_Error( 'listmonk_subscriber_api_failed', 'Listmonk subscriber API failed.' );
 	}
 
 	private function api_headers( array $settings ): array {
