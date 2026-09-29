@@ -29,15 +29,15 @@
 		return payload;
 	}
 
-	function showInlineError(form) {
+	function showInlineError(form, text) {
 		var message = form.querySelector('.listmonk-signup__message');
 		if (!message) {
 			message = document.createElement('div');
-			message.className = 'listmonk-signup__message listmonk-signup__message--error';
 			message.setAttribute('role', 'status');
 			form.insertBefore(message, form.firstChild);
 		}
-		message.textContent = window.listmonkSignup && window.listmonkSignup.errorMessage ? window.listmonkSignup.errorMessage : 'The subscription could not be completed. Please try again later.';
+		message.className = 'listmonk-signup__message listmonk-signup__message--error';
+		message.textContent = text || (window.listmonkSignup && window.listmonkSignup.errorMessage ? window.listmonkSignup.errorMessage : 'The subscription could not be completed. Please try again later.');
 	}
 
 	document.addEventListener('submit', function (event) {
@@ -67,7 +67,7 @@
 			headers: {
 				'Content-Type': 'application/json',
 				'Accept': 'application/json',
-				'X-WP-Nonce': window.listmonkSignup.restNonce
+				'X-WP-Nonce': (window.listmonkSignup && window.listmonkSignup.restNonce) || ''
 			},
 			body: JSON.stringify(payloadFromForm(form))
 		})
@@ -75,12 +75,16 @@
 				return response.json().catch(function () {
 					return null;
 				}).then(function (data) {
-					if (data && data.redirect_url) {
-						return data;
+					if (!response.ok) {
+						var responseError = new Error('Submission failed.');
+						if (data && (data.error_code === 'invalid_nonce' || data.error_code === 'invalid_submission_token')) {
+							responseError.userMessage = data.message;
+						}
+						throw responseError;
 					}
 
-					if (!response.ok) {
-						throw new Error('Submission failed.');
+					if (data && data.redirect_url) {
+						return data;
 					}
 
 					return data;
@@ -92,12 +96,12 @@
 				}
 				window.location.href = data.redirect_url;
 			})
-			.catch(function () {
+			.catch(function (error) {
 				form.listmonkSubmissionPending = false;
 				if (submitButton) {
 					submitButton.disabled = false;
 				}
-				showInlineError(form);
+				showInlineError(form, error && error.userMessage);
 			});
 	});
 }());
