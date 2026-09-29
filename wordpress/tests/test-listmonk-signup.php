@@ -876,6 +876,64 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertSame( 'Error!', $payload['result']['message'] );
 	}
 
+	public function test_duplicate_409_lookup_checks_later_pages_for_exact_email(): void {
+		$settings = [ 'base_url' => 'https://newsletter.example.test', 'api_token' => 'api:token' ];
+		$page_one = [];
+		for ( $i = 1; $i <= 100; $i++ ) {
+			$page_one[] = [ 'id' => $i, 'email' => 'other' . $i . '@example.test' ];
+		}
+
+		$this->mock_http_responses(
+			[
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode( [ 'data' => [ 'results' => $page_one, 'total_pages' => 2 ] ] ),
+				],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode( [ 'data' => [ 'results' => [ [ 'id' => 123, 'email' => 'ADA@example.test' ] ], 'total_pages' => 2 ] ] ),
+				],
+			]
+		);
+
+		$subscriber = $this->call_private( 'find_listmonk_subscriber_by_email', [ $settings, 'ada@example.test', 'req-page' ] );
+
+		$this->assertSame( 123, $subscriber['id'] );
+		$this->assertCount( 2, $this->requests );
+		parse_str( (string) wp_parse_url( $this->requests[0]['url'], PHP_URL_QUERY ), $first_query );
+		parse_str( (string) wp_parse_url( $this->requests[1]['url'], PHP_URL_QUERY ), $second_query );
+		$this->assertSame( 'ada@example.test', $first_query['search'] );
+		$this->assertSame( '1', $first_query['page'] );
+		$this->assertSame( '100', $first_query['per_page'] );
+		$this->assertSame( '2', $second_query['page'] );
+	}
+
+	public function test_duplicate_409_lookup_exhausts_paginated_results_before_error(): void {
+		$settings = [ 'base_url' => 'https://newsletter.example.test', 'api_token' => 'api:token' ];
+		$page_one = [];
+		for ( $i = 1; $i <= 100; $i++ ) {
+			$page_one[] = [ 'id' => $i, 'email' => 'other' . $i . '@example.test' ];
+		}
+
+		$this->mock_http_responses(
+			[
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode( [ 'data' => [ 'results' => $page_one, 'total_pages' => 2 ] ] ),
+				],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode( [ 'data' => [ 'results' => [ [ 'id' => 101, 'email' => 'other101@example.test' ] ], 'total_pages' => 2 ] ] ),
+				],
+			]
+		);
+
+		$result = $this->call_private( 'find_listmonk_subscriber_by_email', [ $settings, 'ada@example.test', 'req-miss' ] );
+
+		$this->assertWPError( $result );
+		$this->assertCount( 2, $this->requests );
+	}
+
 	public function test_shortcode_consumes_result_once_and_restores_values(): void {
 		$token = wp_generate_uuid4();
 		set_transient(

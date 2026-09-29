@@ -900,64 +900,78 @@ final class Listmonk_Signup {
 	}
 
 	private function find_listmonk_subscriber_by_email( array $settings, string $email, string $request_id = '' ) {
-		$response = wp_remote_request(
-			add_query_arg(
-				[
-					'search'   => $email,
-					'per_page' => 'all',
-				],
-				trailingslashit( $settings['base_url'] ) . 'api/subscribers'
-			),
-			[
-				'method'  => 'GET',
-				'timeout' => 15,
-				'headers' => $this->api_headers( $settings ),
-			]
-		);
+		$page     = 1;
+		$per_page = 100;
 
-		if ( is_wp_error( $response ) ) {
-			$this->record_api_failure(
-				sprintf( __( 'Listmonk Subscriber Lookup API failed: %s', 'listmonk-signup' ), $response->get_error_message() ),
+		do {
+			$response = wp_remote_request(
+				add_query_arg(
+					[
+						'search'   => $email,
+						'page'     => $page,
+						'per_page' => $per_page,
+					],
+					trailingslashit( $settings['base_url'] ) . 'api/subscribers'
+				),
 				[
-					'email'      => $email,
-					'request_id' => $request_id,
+					'method'  => 'GET',
+					'timeout' => 15,
+					'headers' => $this->api_headers( $settings ),
 				]
 			);
-			return $response;
-		}
 
-		$code = (int) wp_remote_retrieve_response_code( $response );
-		$this->debug_log(
-			'Subscriber lookup API response.',
-			[
-				'request_id' => $request_id,
-				'http_code'  => $code,
-			]
-		);
-
-		if ( $code < 200 || $code >= 300 ) {
-			return $this->listmonk_recovery_error(
-				__( 'Listmonk Subscriber Lookup API returned an error status.', 'listmonk-signup' ),
-				[
-					'email'      => $email,
-					'http_code'  => $code,
-					'request_id' => $request_id,
-					'body'       => $this->debug_body_snippet( wp_remote_retrieve_body( $response ) ),
-				]
-			);
-		}
-
-		$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
-		$results = $decoded['data']['results'] ?? [];
-		if ( ! is_array( $results ) ) {
-			$results = [];
-		}
-
-		foreach ( $results as $subscriber ) {
-			if ( is_array( $subscriber ) && isset( $subscriber['email'] ) && strtolower( (string) $subscriber['email'] ) === strtolower( $email ) ) {
-				return $subscriber;
+			if ( is_wp_error( $response ) ) {
+				$this->record_api_failure(
+					sprintf( __( 'Listmonk Subscriber Lookup API failed: %s', 'listmonk-signup' ), $response->get_error_message() ),
+					[
+						'email'      => $email,
+						'request_id' => $request_id,
+					]
+				);
+				return $response;
 			}
-		}
+
+			$code = (int) wp_remote_retrieve_response_code( $response );
+			$this->debug_log(
+				'Subscriber lookup API response.',
+				[
+					'request_id' => $request_id,
+					'http_code'  => $code,
+					'page'       => $page,
+				]
+			);
+
+			if ( $code < 200 || $code >= 300 ) {
+				return $this->listmonk_recovery_error(
+					__( 'Listmonk Subscriber Lookup API returned an error status.', 'listmonk-signup' ),
+					[
+						'email'      => $email,
+						'http_code'  => $code,
+						'request_id' => $request_id,
+						'body'       => $this->debug_body_snippet( wp_remote_retrieve_body( $response ) ),
+					]
+				);
+			}
+
+			$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
+			$results = $decoded['data']['results'] ?? [];
+			if ( ! is_array( $results ) ) {
+				$results = [];
+			}
+
+			foreach ( $results as $subscriber ) {
+				if ( is_array( $subscriber ) && isset( $subscriber['email'] ) && strtolower( (string) $subscriber['email'] ) === strtolower( $email ) ) {
+					return $subscriber;
+				}
+			}
+
+			$total_pages = isset( $decoded['data']['total_pages'] ) ? absint( $decoded['data']['total_pages'] ) : 0;
+			if ( $total_pages > 0 && $page >= $total_pages ) {
+				break;
+			}
+
+			$page++;
+		} while ( count( $results ) >= $per_page );
 
 		return $this->listmonk_recovery_error(
 			__( 'Listmonk Subscriber API conflict recovery failed: exact subscriber not found.', 'listmonk-signup' ),
