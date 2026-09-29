@@ -61,10 +61,19 @@
 			body: JSON.stringify(payloadFromForm(form))
 		})
 			.then(function (response) {
-				if (!response.ok) {
-					throw new Error('Submission failed.');
-				}
-				return response.json();
+				return response.json().catch(function () {
+					return null;
+				}).then(function (data) {
+					if (data && data.redirect_url) {
+						return data;
+					}
+
+					if (!response.ok) {
+						throw new Error('Submission failed.');
+					}
+
+					return data;
+				});
 			})
 			.then(function (data) {
 				if (!data || !data.redirect_url) {

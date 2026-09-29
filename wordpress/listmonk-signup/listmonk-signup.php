@@ -359,8 +359,17 @@ final class Listmonk_Signup {
 			$payload = [];
 		}
 
-		$result   = $this->process_submission( $payload, 'rest_json' );
-		$response = rest_ensure_response( [ 'redirect_url' => $result['redirect_url'] ] );
+		$result          = $this->process_submission( $payload, 'rest_json' );
+		$submission_type = $result['result']['type'] ?? 'error';
+		$response        = rest_ensure_response(
+			[
+				'redirect_url' => $result['redirect_url'],
+				'result'       => $submission_type,
+				'message'      => $result['result']['message'] ?? '',
+				'error_code'   => 'error' === $submission_type ? ( $result['result']['code'] ?? 'submission_failed' ) : null,
+			]
+		);
+		$response->set_status( $result['result']['status'] ?? 200 );
 		$response->header( 'Cache-Control', 'no-cache, must-revalidate, max-age=0' );
 
 		return $response;
@@ -382,7 +391,7 @@ final class Listmonk_Signup {
 
 		if ( ! isset( $raw_input[ self::NONCE_NAME ] ) || ! wp_verify_nonce( sanitize_text_field( (string) $raw_input[ self::NONCE_NAME ] ), self::NONCE_ACTION ) ) {
 			$this->debug_log( 'Frontend signup rejected: invalid nonce.', [ 'source' => $source, 'redirect_url' => $redirect_url ] );
-			return $this->submission_result_payload( $redirect_url, $this->error_result( 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal.' ), $values );
+			return $this->submission_result_payload( $redirect_url, $this->error_result( 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal.', 'invalid_nonce', 403 ), $values );
 		}
 
 		if ( ! empty( $raw_input['website'] ) ) {
@@ -392,22 +401,22 @@ final class Listmonk_Signup {
 
 		if ( ! $this->consume_submission_token( $raw_input ) ) {
 			$this->debug_log( 'Frontend signup rejected: invalid submission token.', [ 'source' => $source, 'redirect_url' => $redirect_url ] );
-			return $this->submission_result_payload( $redirect_url, $this->error_result( 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal.' ), $values );
+			return $this->submission_result_payload( $redirect_url, $this->error_result( 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal.', 'invalid_submission_token', 403 ), $values );
 		}
 
 		if ( empty( $values['email'] ) || ! is_email( $values['email'] ) ) {
 			$this->debug_log( 'Frontend signup rejected: invalid email.', [ 'source' => $source, 'redirect_url' => $redirect_url ] );
-			return $this->submission_result_payload( $redirect_url, $this->error_result( 'Bitte gib eine gültige E-Mail-Adresse ein.' ), $values );
+			return $this->submission_result_payload( $redirect_url, $this->error_result( 'Bitte gib eine gültige E-Mail-Adresse ein.', 'invalid_email', 400 ), $values );
 		}
 
 		if ( empty( $values['consent'] ) ) {
 			$this->debug_log( 'Frontend signup rejected: missing consent.', [ 'source' => $source, 'redirect_url' => $redirect_url ] );
-			return $this->submission_result_payload( $redirect_url, $this->error_result( 'Bitte bestätige, dass du den Newsletter abonnieren möchtest.' ), $values );
+			return $this->submission_result_payload( $redirect_url, $this->error_result( 'Bitte bestätige, dass du den Newsletter abonnieren möchtest.', 'missing_consent', 400 ), $values );
 		}
 
 		if ( $this->is_rate_limited( $values['email'] ) ) {
 			$this->debug_log( 'Frontend signup rejected: rate limited.', [ 'source' => $source, 'redirect_url' => $redirect_url ] );
-			return $this->submission_result_payload( $redirect_url, $this->error_result( 'Bitte warte kurz, bevor du es noch einmal versuchst.' ), $values );
+			return $this->submission_result_payload( $redirect_url, $this->error_result( 'Bitte warte kurz, bevor du es noch einmal versuchst.', 'rate_limited', 429 ), $values );
 		}
 
 		$settings = $this->settings();
@@ -425,14 +434,14 @@ final class Listmonk_Signup {
 					'list_count'      => count( $list_ids ),
 				]
 			);
-			return $this->submission_result_payload( $redirect_url, $this->error_result( $settings['error_message'] ), $values );
+			return $this->submission_result_payload( $redirect_url, $this->error_result( $settings['error_message'], 'configuration_error', 500 ), $values );
 		}
 
 		$request_id = wp_generate_uuid4();
 		$result     = $this->subscribe_via_subscribers_endpoint( $settings, $list_ids, $values, $request_id );
 
 		if ( is_wp_error( $result ) ) {
-			return $this->submission_result_payload( $redirect_url, $this->error_result( $settings['error_message'] ), $values );
+			return $this->submission_result_payload( $redirect_url, $this->error_result( $settings['error_message'], 'subscription_failed', 500 ), $values );
 		}
 
 		return $this->submission_result_payload( $redirect_url, $this->success_result( $settings['success_message'] ) );
@@ -1009,13 +1018,16 @@ final class Listmonk_Signup {
 		return [
 			'type'    => 'success',
 			'message' => $message ?: $settings['success_message'],
+			'status'  => 200,
 		];
 	}
 
-	private function error_result( string $message ): array {
+	private function error_result( string $message, string $code = 'submission_failed', int $status = 400 ): array {
 		return [
 			'type'    => 'error',
 			'message' => $message,
+			'code'    => $code,
+			'status'  => $status,
 		];
 	}
 }

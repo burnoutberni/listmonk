@@ -261,11 +261,82 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$response = $this->plugin->handle_rest_submission( $request );
 		$data     = $response->get_data();
 
+		$this->assertSame( 403, $response->get_status() );
 		$this->assertArrayHasKey( 'redirect_url', $data );
+		$this->assertSame( 'error', $data['result'] );
+		$this->assertSame( 'invalid_nonce', $data['error_code'] );
+		$this->assertSame( 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal.', $data['message'] );
 		$payload = $this->redirect_payload_from_url( $data['redirect_url'] );
 		$this->assertSame( 'error', $payload['result']['type'] );
 		$this->assertSame( 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal.', $payload['result']['message'] );
 		$this->assertSame( 'ada@example.test', $payload['values']['email'] );
+	}
+
+	public function test_rest_submission_validation_returns_bad_request_status(): void {
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'bad-email',
+					'consent' => '1',
+				]
+			)
+		);
+		$data     = $response->get_data();
+		$payload  = $this->redirect_payload_from_url( $data['redirect_url'] );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'error', $data['result'] );
+		$this->assertSame( 'invalid_email', $data['error_code'] );
+		$this->assertSame( 'Bitte gib eine gültige E-Mail-Adresse ein.', $data['message'] );
+		$this->assertSame( 'invalid_email', $payload['result']['code'] );
+		$this->assertSame( 400, $payload['result']['status'] );
+	}
+
+	public function test_rest_submission_rate_limit_returns_too_many_requests_status(): void {
+		set_transient( 'listmonk_signup_email_ip_' . hash( 'sha256', '203.0.113.10|ada@example.test' ), 5, 300 );
+
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+				]
+			)
+		);
+		$data     = $response->get_data();
+
+		$this->assertSame( 429, $response->get_status() );
+		$this->assertSame( 'error', $data['result'] );
+		$this->assertSame( 'rate_limited', $data['error_code'] );
+		$this->assertSame( 'Bitte warte kurz, bevor du es noch einmal versuchst.', $data['message'] );
+	}
+
+	public function test_rest_submission_configuration_error_returns_server_error_status(): void {
+		update_option( 'listmonk_signup_settings', [ 'api_token' => '' ] );
+
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+				]
+			)
+		);
+		$data     = $response->get_data();
+
+		$this->assertSame( 500, $response->get_status() );
+		$this->assertSame( 'error', $data['result'] );
+		$this->assertSame( 'configuration_error', $data['error_code'] );
+		$this->assertSame( 'Die Anmeldung konnte leider nicht abgeschlossen werden. Bitte versuche es später erneut.', $data['message'] );
 	}
 
 	public function test_rest_submission_success_returns_json_redirect_with_result(): void {
@@ -297,7 +368,11 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$data    = $response->get_data();
 		$payload = $this->redirect_payload_from_url( $data['redirect_url'] );
 
+		$this->assertSame( 200, $response->get_status() );
 		$this->assertStringContainsString( 'listmonk_signup_result=', $data['redirect_url'] );
+		$this->assertSame( 'success', $data['result'] );
+		$this->assertSame( 'Danke!', $data['message'] );
+		$this->assertNull( $data['error_code'] );
 		$this->assertSame( 'success', $payload['result']['type'] );
 		$this->assertSame( 'Danke!', $payload['result']['message'] );
 		$this->assertCount( 1, $this->requests );
@@ -330,6 +405,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 
 		$payload = $this->redirect_payload_from_url( $response->get_data()['redirect_url'] );
 
+		$this->assertSame( 200, $response->get_status() );
 		$this->assertSame( 'success', $payload['result']['type'] );
 		$this->assertSame( 'Danke!', $payload['result']['message'] );
 	}
