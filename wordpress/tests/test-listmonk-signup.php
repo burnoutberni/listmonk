@@ -195,6 +195,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 
 		$this->assertTrue( wp_style_is( 'listmonk-signup', 'enqueued' ) );
 		$this->assertTrue( wp_script_is( 'listmonk-signup', 'enqueued' ) );
+		$this->assertStringContainsString( '"restNonce":"' . wp_create_nonce( 'wp_rest' ) . '"', (string) wp_scripts()->get_data( 'listmonk-signup', 'data' ) );
 		$this->assertStringNotContainsString( '<style>', $html );
 		$this->assertStringNotContainsString( 'admin-post.php', $html );
 		$this->assertStringNotContainsString( 'name="action" value="listmonk_signup"', $html );

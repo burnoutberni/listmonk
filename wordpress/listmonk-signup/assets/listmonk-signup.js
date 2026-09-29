@@ -66,7 +66,8 @@
 			credentials: 'same-origin',
 			headers: {
 				'Content-Type': 'application/json',
-				'Accept': 'application/json'
+				'Accept': 'application/json',
+				'X-WP-Nonce': window.listmonkSignup.restNonce
 			},
 			body: JSON.stringify(payloadFromForm(form))
 		})

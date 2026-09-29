@@ -570,6 +570,7 @@ final class Listmonk_Signup {
 			'listmonkSignup',
 			[
 				'errorMessage' => __( 'The subscription could not be completed. Please try again later.', 'listmonk-signup' ),
+				'restNonce'    => wp_create_nonce( 'wp_rest' ),
 			]
 		);
 	}
