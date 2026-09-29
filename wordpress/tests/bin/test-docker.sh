@@ -22,5 +22,9 @@ for attempt in $(seq 1 60); do
 	sleep 2
 done
 
-tests/bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3307 latest true
-composer test
+WP_TESTS_DB_NAME=wordpress_test \
+	WP_TESTS_DB_USER=root \
+	WP_TESTS_DB_PASS=root \
+	WP_TESTS_DB_HOST=127.0.0.1:3307 \
+	WP_TESTS_SKIP_DB_CREATE=true \
+	composer test
