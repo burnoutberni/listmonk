@@ -28,7 +28,7 @@ Place this shortcode on the newsletter page:
 [listmonk_signup]
 ```
 
-The form works without JavaScript and posts back to WordPress with nonce protection, a honeypot field, and transient-based rate limiting. Email is shown first, followed by optional personalization fields and an optional styled selector for all 23 Vienna districts.
+The form submits JSON to the public WordPress REST route `/wp-json/listmonk-signup/v1/submit` with nonce protection, a one-time submission token, a honeypot field, and transient-based rate limiting. Email is shown first, followed by optional personalization fields and an optional styled selector for all 23 Vienna districts.
 
 ## Listmonk Behavior
 
@@ -55,15 +55,14 @@ For testing, enable **Temporäres Debug Logging** in **Settings > Listmonk Signu
 
 ## Automated Tests
 
-From `wordpress/`, install PHP test dependencies and the WordPress test suite:
+From `wordpress/`, install PHP test dependencies and run the WordPress test suite:
 
 ```bash
 composer install
-tests/bin/install-wp-tests.sh wordpress_test root '' localhost latest
 composer test
 ```
 
-If the WordPress test suite is already installed elsewhere, set `WP_TESTS_DIR` before running `composer test`.
+`composer test` installs the WordPress test suite into `/tmp/wordpress-tests-lib` by default when it is missing. Override the defaults with `WP_TESTS_DIR`, `WP_CORE_DIR`, `WP_TESTS_DB_NAME`, `WP_TESTS_DB_USER`, `WP_TESTS_DB_PASS`, and `WP_TESTS_DB_HOST` as needed.
 
 The local test command requires a reachable MySQL/MariaDB server and creates/uses the configured test database. CI runs the same PHPUnit suite against a disposable MySQL service.
 

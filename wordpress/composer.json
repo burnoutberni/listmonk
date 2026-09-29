@@ -9,9 +9,10 @@
   },
   "scripts": {
     "build:zip": "rm -f listmonk-signup.zip && zip -r listmonk-signup.zip listmonk-signup",
-    "test": "phpunit",
+    "test:setup": "bash tests/bin/setup-wp-tests.sh",
+    "test": "bash tests/bin/setup-wp-tests.sh && phpunit",
     "test:docker": "tests/bin/test-docker.sh",
-    "test:plugin": "phpunit --testsuite listmonk-signup",
+    "test:plugin": "bash tests/bin/setup-wp-tests.sh && phpunit --testsuite listmonk-signup",
     "lint:php": "php -l listmonk-signup/listmonk-signup.php"
   },
   "config": {

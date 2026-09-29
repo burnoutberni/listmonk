@@ -4,7 +4,7 @@ Tags: newsletter, listmonk, signup, shortcode, email
 Requires at least: 6.4
 Tested up to: 7.0.4
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: AGPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -42,7 +42,7 @@ The plugin was originally built for use with wirmachen.wien, so some defaults an
 
 = Does this plugin require JavaScript? =
 
-No. The signup form works without JavaScript.
+Yes. The signup form submits JSON to `/wp-json/listmonk-signup/v1/submit` so anonymous signups do not depend on `admin-post.php` access.
 
 = Does the plugin control double opt-in? =
 
@@ -56,10 +56,18 @@ Use the Listmonk API credential in `api_user:token` format.
 
 == Changelog ==
 
+= 1.1.0 =
+* Improved signup submission handling and frontend REST-based flow.
+* Added stronger nonce, submission token, honeypot, and rate-limit protections.
+* Added temporary debug logging and expanded automated test coverage.
+
 = 1.0.0 =
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Includes substantial signup flow, security, logging, and test coverage improvements. Review settings after updating and clear temporary debug logs if enabled.
 
 = 1.0.0 =
 Initial release.
