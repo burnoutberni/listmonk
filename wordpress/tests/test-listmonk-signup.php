@@ -592,6 +592,87 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertSame( 'https://newsletter.example.test/api/subscribers/12/optin', $this->requests[5]['url'] );
 	}
 
+	public function test_rest_duplicate_409_sends_optin_for_mixed_existing_unconfirmed_and_missing_single_list(): void {
+		update_option(
+			'listmonk_signup_settings',
+			[
+				'base_url'        => 'https://newsletter.example.test',
+				'api_token'       => 'api:token',
+				'list_ids'        => "3\n7",
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
+			]
+		);
+
+		$this->mock_http_responses(
+			[
+				[ 'response' => [ 'code' => 409 ], 'body' => '{"message":"conflict"}' ],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[
+										'id'    => 12,
+										'email' => 'ada@example.test',
+										'lists' => [
+											[ 'id' => 3, 'optin' => 'double', 'subscription_status' => 'unconfirmed' ],
+										],
+									],
+								],
+							],
+						]
+					),
+				],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[ 'id' => 7, 'optin' => 'single' ],
+								],
+							],
+						]
+					),
+				],
+				[ 'response' => [ 'code' => 200 ], 'body' => '{"data":true}' ],
+				[ 'response' => [ 'code' => 200 ], 'body' => '{"data":true}' ],
+			]
+		);
+
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+				]
+			)
+		);
+
+		$payload = $this->redirect_payload_from_url( $response->get_data()['redirect_url'] );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'success', $payload['result']['type'] );
+		$this->assertCount( 5, $this->requests );
+		$this->assertStringStartsWith( 'https://newsletter.example.test/api/lists?', $this->requests[2]['url'] );
+		$this->assertSame( 'PUT', $this->requests[3]['args']['method'] );
+		$this->assertSame(
+			[
+				'ids'             => [ 12 ],
+				'action'          => 'add',
+				'target_list_ids' => [ 7 ],
+				'status'          => 'confirmed',
+			],
+			json_decode( $this->requests[3]['args']['body'], true )
+		);
+		$this->assertSame( 'POST', $this->requests[4]['args']['method'] );
+		$this->assertSame( 'https://newsletter.example.test/api/subscribers/12/optin', $this->requests[4]['url'] );
+	}
+
 	public function test_rest_duplicate_409_lookup_miss_returns_generic_error(): void {
 		update_option(
 			'listmonk_signup_settings',

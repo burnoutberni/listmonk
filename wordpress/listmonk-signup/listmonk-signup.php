@@ -835,9 +835,10 @@ final class Listmonk_Signup {
 
 		$current_list_ids = $this->subscriber_list_ids( $subscriber );
 		$missing_list_ids = array_values( array_diff( $list_ids, $current_list_ids ) );
+		$subscriber_needs_optin = $this->subscriber_needs_optin_for_lists( $subscriber, $list_ids );
 
 		if ( empty( $missing_list_ids ) ) {
-			if ( $this->subscriber_needs_optin_for_lists( $subscriber, $list_ids ) ) {
+			if ( $subscriber_needs_optin ) {
 				$optin = $this->send_subscriber_optin( $settings, $subscriber_id, $values['email'], $request_id );
 				if ( is_wp_error( $optin ) ) {
 					return $optin;
@@ -882,7 +883,9 @@ final class Listmonk_Signup {
 			if ( is_wp_error( $added ) ) {
 				return $added;
 			}
+		}
 
+		if ( $subscriber_needs_optin || ! empty( $double_optin_list_ids ) ) {
 			$optin = $this->send_subscriber_optin( $settings, $subscriber_id, $values['email'], $request_id );
 			if ( is_wp_error( $optin ) ) {
 				return $optin;
