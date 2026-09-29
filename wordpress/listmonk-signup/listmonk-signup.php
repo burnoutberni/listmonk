@@ -589,13 +589,6 @@ final class Listmonk_Signup {
 		];
 	}
 
-	private function redirect_with_result( string $redirect_url, array $result, array $values = [] ): void {
-		$token = $this->store_submission_result( $result, $values );
-
-		wp_safe_redirect( add_query_arg( self::RESULT_QUERY_ARG, rawurlencode( $token ), $redirect_url ) );
-		$this->terminate_request();
-	}
-
 	private function store_submission_result( array $result, array $values = [] ): string {
 		$token = wp_generate_uuid4();
 
