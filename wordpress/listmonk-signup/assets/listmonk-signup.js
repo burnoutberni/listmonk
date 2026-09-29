@@ -1,17 +1,17 @@
-(function () {
+(() => {
 	'use strict';
 
 	function payloadFromForm(form) {
-		var payload = {};
-		var data = new FormData(form);
+		const payload = {};
+		const data = new FormData(form);
 
-		data.forEach(function (value, name) {
+		data.forEach((value, name) => {
 			if (name.slice(-2) === '[]') {
-				name = name.slice(0, -2);
-				if (!Array.isArray(payload[name])) {
-					payload[name] = [];
+				const fieldName = name.slice(0, -2);
+				if (!Array.isArray(payload[fieldName])) {
+					payload[fieldName] = [];
 				}
-				payload[name].push(value);
+				payload[fieldName].push(value);
 				return;
 			}
 
@@ -30,7 +30,7 @@
 	}
 
 	function showInlineError(form, text) {
-		var message = form.querySelector('.listmonk-signup__message');
+		let message = form.querySelector('.listmonk-signup__message');
 		if (!message) {
 			message = document.createElement('div');
 			message.setAttribute('role', 'status');
@@ -40,8 +40,8 @@
 		message.textContent = text || (window.listmonkSignup && window.listmonkSignup.errorMessage ? window.listmonkSignup.errorMessage : 'The subscription could not be completed. Please try again later.');
 	}
 
-	document.addEventListener('submit', function (event) {
-		var form = event.target;
+	document.addEventListener('submit', (event) => {
+		const form = event.target;
 		if (!form || !form.classList || !form.classList.contains('listmonk-signup')) {
 			return;
 		}
@@ -55,7 +55,7 @@
 			return;
 		}
 
-		var submitButton = form.querySelector('[type="submit"]');
+		const submitButton = form.querySelector('[type="submit"]');
 		form.listmonkSubmissionPending = true;
 		if (submitButton) {
 			submitButton.disabled = true;
@@ -71,13 +71,13 @@
 			},
 			body: JSON.stringify(payloadFromForm(form))
 		})
-			.then(function (response) {
-				return response.json().catch(function () {
+			.then((response) => {
+				return response.json().catch(() => {
 					return null;
-				}).then(function (data) {
+				}).then((data) => {
 					if (!response.ok) {
 						if (data && (data.error_code === 'invalid_nonce' || data.error_code === 'invalid_submission_token')) {
-							var responseError = new Error('Submission failed.');
+							const responseError = new Error('Submission failed.');
 							responseError.userMessage = data.message;
 							throw responseError;
 						}
@@ -96,13 +96,13 @@
 					return data;
 				});
 			})
-			.then(function (data) {
+			.then((data) => {
 				if (!data || !data.redirect_url) {
 					throw new Error('Missing redirect URL.');
 				}
 				window.location.href = data.redirect_url;
 			})
-			.catch(function (error) {
+			.catch((error) => {
 				form.listmonkSubmissionPending = false;
 				if (submitButton) {
 					submitButton.disabled = false;
@@ -110,4 +110,4 @@
 				showInlineError(form, error && error.userMessage);
 			});
 	});
-}());
+})();
