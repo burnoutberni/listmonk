@@ -76,11 +76,17 @@
 					return null;
 				}).then(function (data) {
 					if (!response.ok) {
-						var responseError = new Error('Submission failed.');
 						if (data && (data.error_code === 'invalid_nonce' || data.error_code === 'invalid_submission_token')) {
+							var responseError = new Error('Submission failed.');
 							responseError.userMessage = data.message;
+							throw responseError;
 						}
-						throw responseError;
+
+						if (data && data.redirect_url) {
+							return data;
+						}
+
+						throw new Error('Submission failed.');
 					}
 
 					if (data && data.redirect_url) {
