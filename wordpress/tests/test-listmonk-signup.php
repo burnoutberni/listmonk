@@ -247,7 +247,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		}
 	}
 
-	public function test_rest_submission_bad_nonce_returns_json_redirect_with_error_result(): void {
+	public function test_rest_submission_bad_nonce_does_not_store_result_transient(): void {
 		$request = $this->rest_request(
 			[
 				'listmonk_signup_nonce' => 'bad-nonce',
@@ -266,10 +266,28 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertSame( 'error', $data['result'] );
 		$this->assertSame( 'invalid_nonce', $data['error_code'] );
 		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $data['message'] );
-		$payload = $this->redirect_payload_from_url( $data['redirect_url'] );
-		$this->assertSame( 'error', $payload['result']['type'] );
-		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $payload['result']['message'] );
-		$this->assertSame( 'ada@example.test', $payload['values']['email'] );
+		$this->assertNoSubmissionResultToken( $data['redirect_url'] );
+	}
+
+	public function test_rest_submission_invalid_submission_token_does_not_store_result_transient(): void {
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+				]
+			)
+		);
+		$data     = $response->get_data();
+
+		$this->assertSame( 403, $response->get_status() );
+		$this->assertSame( 'error', $data['result'] );
+		$this->assertSame( 'invalid_submission_token', $data['error_code'] );
+		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $data['message'] );
+		$this->assertNoSubmissionResultToken( $data['redirect_url'] );
+		$this->assertSame( [], $this->requests );
 	}
 
 	public function test_rest_submission_validation_returns_bad_request_status(): void {
@@ -760,7 +778,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertTrue( $this->call_private( 'is_rate_limited', [ 'another@example.test' ] ) );
 	}
 
-	public function test_submission_validation_redirects_and_preserves_values(): void {
+	public function test_submission_without_nonce_returns_retry_error_without_result_transient(): void {
 		$result = $this->process_submission_payload(
 		[
 			'return_to' => home_url( '/newsletter/?listmonk_signup_result=old' ),
@@ -769,12 +787,12 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		]
 		);
 
-		$this->assertStringStartsWith( home_url( '/newsletter/?' ), $result['redirect_url'] );
+		$this->assertSame( home_url( '/newsletter/' ), $result['redirect_url'] );
 		$this->assertStringNotContainsString( 'listmonk_signup_result=old', $result['redirect_url'] );
-		$payload = $this->redirect_payload_from_url( $result['redirect_url'] );
-		$this->assertSame( 'error', $payload['result']['type'] );
-		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $payload['result']['message'] );
-		$this->assertSame( 'Ada', $payload['values']['vorname'] );
+		$this->assertNoSubmissionResultToken( $result['redirect_url'] );
+		$this->assertSame( 'error', $result['result']['type'] );
+		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $result['result']['message'] );
+		$this->assertSame( 'Ada', $result['values']['vorname'] );
 	}
 
 	public function test_submission_rejects_missing_consent_and_subscriber_api_failures(): void {
@@ -908,7 +926,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertFalse( $this->call_private( 'consume_submission_token' ) );
 	}
 
-	public function test_invalid_submission_token_redirects_with_retry_error_without_http(): void {
+	public function test_invalid_submission_token_returns_retry_error_without_http_or_result_transient(): void {
 		$result = $this->process_submission_payload(
 		[
 			'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
@@ -919,12 +937,13 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		]
 		);
 
-		$payload = $this->redirect_payload_from_url( $result['redirect_url'] );
 		$this->assertSame( [], $this->requests );
-		$this->assertSame( 'error', $payload['result']['type'] );
-		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $payload['result']['message'] );
-		$this->assertSame( 'ada@example.test', $payload['values']['email'] );
-		$this->assertSame( 'Ada', $payload['values']['vorname'] );
+		$this->assertSame( 'error', $result['result']['type'] );
+		$this->assertSame( 'invalid_submission_token', $result['result']['code'] );
+		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $result['result']['message'] );
+		$this->assertSame( 'ada@example.test', $result['values']['email'] );
+		$this->assertSame( 'Ada', $result['values']['vorname'] );
+		$this->assertNoSubmissionResultToken( $result['redirect_url'] );
 	}
 
 	public function test_honeypot_short_circuits_as_success_without_http_or_token(): void {
@@ -1048,5 +1067,12 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertIsArray( $payload );
 
 		return $payload;
+	}
+
+	private function assertNoSubmissionResultToken( string $url ): void {
+		$parts = wp_parse_url( $url );
+		$this->assertIsArray( $parts );
+		parse_str( $parts['query'] ?? '', $query );
+		$this->assertArrayNotHasKey( 'listmonk_signup_result', $query );
 	}
 }

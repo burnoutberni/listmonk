@@ -396,7 +396,7 @@ final class Listmonk_Signup {
 
 		if ( ! isset( $raw_input[ self::NONCE_NAME ] ) || ! wp_verify_nonce( sanitize_text_field( (string) $raw_input[ self::NONCE_NAME ] ), self::NONCE_ACTION ) ) {
 			$this->debug_log( 'Frontend signup rejected: invalid nonce.', [ 'source' => $source, 'redirect_url' => $redirect_url ] );
-			return $this->submission_result_payload( $redirect_url, $this->error_result( __( 'Your session has expired. Please reload the page and try again.', 'listmonk-signup' ), 'invalid_nonce', 403 ), $values );
+			return $this->submission_result_payload_without_storage( $redirect_url, $this->error_result( __( 'Your session has expired. Please reload the page and try again.', 'listmonk-signup' ), 'invalid_nonce', 403 ), $values );
 		}
 
 		if ( ! empty( $raw_input['website'] ) ) {
@@ -406,7 +406,7 @@ final class Listmonk_Signup {
 
 		if ( ! $this->consume_submission_token( $raw_input ) ) {
 			$this->debug_log( 'Frontend signup rejected: invalid submission token.', [ 'source' => $source, 'redirect_url' => $redirect_url ] );
-			return $this->submission_result_payload( $redirect_url, $this->error_result( __( 'Your session has expired. Please reload the page and try again.', 'listmonk-signup' ), 'invalid_submission_token', 403 ), $values );
+			return $this->submission_result_payload_without_storage( $redirect_url, $this->error_result( __( 'Your session has expired. Please reload the page and try again.', 'listmonk-signup' ), 'invalid_submission_token', 403 ), $values );
 		}
 
 		if ( empty( $values['email'] ) || ! is_email( $values['email'] ) ) {
@@ -594,6 +594,14 @@ final class Listmonk_Signup {
 		$token        = $this->store_submission_result( $result, $values );
 		$redirect_url = add_query_arg( self::RESULT_QUERY_ARG, rawurlencode( $token ), $redirect_url );
 
+		return [
+			'redirect_url' => $redirect_url,
+			'result'       => $result,
+			'values'       => $values,
+		];
+	}
+
+	private function submission_result_payload_without_storage( string $redirect_url, array $result, array $values = [] ): array {
 		return [
 			'redirect_url' => $redirect_url,
 			'result'       => $result,
