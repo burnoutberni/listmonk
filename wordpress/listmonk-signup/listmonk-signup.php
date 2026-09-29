@@ -401,7 +401,7 @@ final class Listmonk_Signup {
 
 		if ( ! empty( $raw_input['website'] ) ) {
 			$this->debug_log( 'Frontend signup accepted as honeypot submission.', [ 'source' => $source, 'redirect_url' => $redirect_url ] );
-			return $this->submission_result_payload( $redirect_url, $this->success_result() );
+			return $this->submission_result_payload_without_storage( $redirect_url, $this->success_result() );
 		}
 
 		if ( ! $this->consume_submission_token( $raw_input ) ) {

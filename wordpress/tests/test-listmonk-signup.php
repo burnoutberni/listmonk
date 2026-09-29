@@ -958,10 +958,10 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		]
 		);
 
-		$payload = $this->redirect_payload_from_url( $result['redirect_url'] );
 		$this->assertSame( [], $this->requests );
-		$this->assertSame( 'success', $payload['result']['type'] );
-		$this->assertSame( 'Thanks!', $payload['result']['message'] );
+		$this->assertSame( 'success', $result['result']['type'] );
+		$this->assertSame( 'Thanks!', $result['result']['message'] );
+		$this->assertNoSubmissionResultToken( $result['redirect_url'] );
 	}
 
 	public function test_debug_logs_caps_and_clear_logs(): void {
