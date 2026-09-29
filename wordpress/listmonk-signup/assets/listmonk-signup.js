@@ -47,8 +47,18 @@
 		}
 
 		event.preventDefault();
+		if (form.listmonkSubmissionPending) {
+			return;
+		}
+
 		if (!form.reportValidity()) {
 			return;
+		}
+
+		var submitButton = form.querySelector('[type="submit"]');
+		form.listmonkSubmissionPending = true;
+		if (submitButton) {
+			submitButton.disabled = true;
 		}
 
 		fetch(form.getAttribute('data-listmonk-rest-url'), {
@@ -82,6 +92,10 @@
 				window.location.href = data.redirect_url;
 			})
 			.catch(function () {
+				form.listmonkSubmissionPending = false;
+				if (submitButton) {
+					submitButton.disabled = false;
+				}
 				showInlineError(form);
 			});
 	});
