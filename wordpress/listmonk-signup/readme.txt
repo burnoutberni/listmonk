@@ -4,7 +4,7 @@ Tags: newsletter, listmonk, signup, shortcode, email
 Requires at least: 6.4
 Tested up to: 7.0.4
 Requires PHP: 8.1
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: AGPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -56,6 +56,12 @@ Use the Listmonk API credential in `api_user:token` format.
 
 == Changelog ==
 
+= 1.1.2 =
+* Prevented duplicate REST submissions from sending multiple Listmonk requests while a signup is already in progress.
+* Avoided storing result transients for honeypot submissions.
+* Clarified existing-subscriber recovery behavior in the plugin documentation.
+* Sent opt-in emails for mixed duplicate-subscriber recovery cases where an existing requested double opt-in list is still unconfirmed and another requested list is added.
+
 = 1.1.1 =
 * Internationalized plugin strings and added German translations.
 * Returned REST submission statuses so the frontend can show the real result of each signup.
@@ -72,6 +78,9 @@ Use the Listmonk API credential in `api_user:token` format.
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.1.2 =
+Improves duplicate-submit protection and existing-subscriber recovery, including mixed double opt-in recovery cases.
 
 = 1.1.1 =
 Adds WordPress translation support and German language files, plus safer handling of duplicate subscribers and failed signup attempts.

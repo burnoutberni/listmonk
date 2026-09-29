@@ -3,7 +3,7 @@
  * Plugin Name: Listmonk Signup
  * Plugin URI: https://github.com/burnoutberni/listmonk
  * Description: Adds a configurable Listmonk newsletter signup shortcode for WordPress.
- * Version: 1.1.1
+ * Version: 1.1.2
  * Requires at least: 6.4
  * Requires PHP: 8.1
  * Author: Bernhard Hayden
@@ -556,13 +556,13 @@ final class Listmonk_Signup {
 			'listmonk-signup',
 			plugins_url( 'assets/listmonk-signup.css', __FILE__ ),
 			[],
-			'1.1.1'
+			'1.1.2'
 		);
 		wp_enqueue_script(
 			'listmonk-signup',
 			plugins_url( 'assets/listmonk-signup.js', __FILE__ ),
 			[],
-			'1.1.1',
+			'1.1.2',
 			true
 		);
 		wp_localize_script(
