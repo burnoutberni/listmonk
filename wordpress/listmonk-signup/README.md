@@ -36,16 +36,16 @@ The signup uses authenticated `POST /api/subscribers` with `email`, optional `na
 
 The plugin does not use the public subscription endpoint and does not perform a separate subscriber lookup or attribute PATCH. Existing subscribers are sent through the same subscriber API request so Listmonk can update attributes and list membership according to its API behavior.
 
-The salutation field shows `Liebe` as a placeholder, not as a prefilled value. If a visitor provides a first or last name but leaves salutation empty, the plugin stores `Liebe`; if they ignore the personalization fields entirely, salutation stays empty.
+The salutation field shows the translated value for `Dear` as a placeholder, not as a prefilled value. If a visitor provides a first or last name but leaves salutation empty, the plugin stores the translated value for `Dear`; if they ignore the personalization fields entirely, salutation stays empty.
 
 ## Debug Logging
 
-For testing, enable **Temporäres Debug Logging** in **Settings > Listmonk Signup**. After submitting the form, recent Listmonk subscriber API request and response logs appear on the same settings page. Disable logging again after testing and clear the logs.
+For testing, enable **Temporary debug logging** in **Settings > Listmonk Signup**. After submitting the form, recent Listmonk subscriber API request and response logs appear on the same settings page. Disable logging again after testing and clear the logs.
 
 ## Test Checklist
 
-- Submit with an empty email and confirm the German validation message appears.
-- Submit without consent and confirm the German validation message appears.
+- Submit with an empty email and confirm the translated validation message appears.
+- Submit without consent and confirm the translated validation message appears.
 - Submit with a valid email and consent and confirm Listmonk receives the subscriber API request.
 - Select one or more Bezirke and confirm `bezirke` is stored in Listmonk.
 - For a double opt-in list, confirm Listmonk sends the opt-in email instead of directly confirming the subscriber.

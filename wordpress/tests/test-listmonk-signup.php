@@ -87,9 +87,9 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'base_url'        => 'https://newsletter.example.test/',
 				'api_token'       => '',
 				'list_ids'        => "3, invalid\n7 3 0",
-				'success_message' => '<b>Danke</b>',
-				'error_message'   => '<script>no</script>Fehler',
-				'consent_text'    => '<a href="https://example.test">Datenschutz</a><script>bad</script>',
+				'success_message' => '<b>Thanks</b>',
+				'error_message'   => '<script>no</script>Error',
+				'consent_text'    => '<a href="https://example.test">Privacy</a><script>bad</script>',
 				'debug_logging'   => '1',
 			]
 		);
@@ -97,9 +97,9 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertSame( 'https://newsletter.example.test', $settings['base_url'] );
 		$this->assertSame( 'api:previous-token', $settings['api_token'] );
 		$this->assertSame( "3\n7", $settings['list_ids'] );
-		$this->assertSame( 'Danke', $settings['success_message'] );
-		$this->assertStringContainsString( 'Fehler', $settings['error_message'] );
-		$this->assertStringContainsString( '<a href="https://example.test">Datenschutz</a>', $settings['consent_text'] );
+		$this->assertSame( 'Thanks', $settings['success_message'] );
+		$this->assertStringContainsString( 'Error', $settings['error_message'] );
+		$this->assertStringContainsString( '<a href="https://example.test">Privacy</a>', $settings['consent_text'] );
 		$this->assertStringNotContainsString( '<script>', $settings['consent_text'] );
 		$this->assertSame( '1', $settings['debug_logging'] );
 		$this->assertSame( [], get_settings_errors( 'listmonk_signup_settings' ) );
@@ -145,7 +145,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 			'sanitize_frontend_values',
 			[
 				[
-					'anrede'   => '<b>Liebe</b>',
+					'anrede'   => '<b>Dear</b>',
 					'vorname'  => '<i>Ada</i>',
 					'nachname' => 'Lovelace<script>',
 					'email'    => 'ADA@EXAMPLE.TEST ',
@@ -155,7 +155,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 			]
 		);
 
-		$this->assertSame( 'Liebe', $values['anrede'] );
+		$this->assertSame( 'Dear', $values['anrede'] );
 		$this->assertSame( 'Ada', $values['vorname'] );
 		$this->assertSame( 'Lovelace', $values['nachname'] );
 		$this->assertSame( 'ADA@EXAMPLE.TEST', $values['email'] );
@@ -169,7 +169,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertSame( [ '1010', '1230' ], $this->call_private( 'selected_district_postal_codes', [ [ '1010', '9999', '1230' ] ] ) );
 		$this->assertSame( [ 3, 7 ], $this->call_private( 'parse_list_ids', [ 'bad 3 07 7 3 0' ] ) );
 		$this->assertSame(
-			[ 'anrede' => 'Liebe', 'vorname' => 'Ada', 'nachname' => 'Lovelace', 'bezirke' => [ '1020' ] ],
+			[ 'anrede' => 'Dear', 'vorname' => 'Ada', 'nachname' => 'Lovelace', 'bezirke' => [ '1020' ] ],
 			$this->call_private( 'subscriber_attribs', [ [ 'anrede' => '', 'vorname' => 'Ada', 'nachname' => 'Lovelace', 'bezirke' => [ '1020' ] ] ] )
 		);
 
@@ -225,8 +225,8 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 					'base_url'        => 'https://newsletter.example.test',
 					'api_token'       => $case['api_token'],
 					'list_ids'        => $case['list_ids'],
-					'success_message' => 'Danke!',
-					'error_message'   => 'Fehler!',
+					'success_message' => 'Thanks!',
+					'error_message'   => 'Error!',
 				]
 			);
 
@@ -242,7 +242,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 
 			$payload = $this->redirect_payload_from_url( $result['redirect_url'] );
 			$this->assertSame( 'error', $payload['result']['type'] );
-			$this->assertSame( 'Fehler!', $payload['result']['message'] );
+			$this->assertSame( 'Error!', $payload['result']['message'] );
 			$this->assertSame( [], $this->requests );
 		}
 	}
@@ -265,10 +265,10 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'redirect_url', $data );
 		$this->assertSame( 'error', $data['result'] );
 		$this->assertSame( 'invalid_nonce', $data['error_code'] );
-		$this->assertSame( 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal.', $data['message'] );
+		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $data['message'] );
 		$payload = $this->redirect_payload_from_url( $data['redirect_url'] );
 		$this->assertSame( 'error', $payload['result']['type'] );
-		$this->assertSame( 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal.', $payload['result']['message'] );
+		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $payload['result']['message'] );
 		$this->assertSame( 'ada@example.test', $payload['values']['email'] );
 	}
 
@@ -290,7 +290,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertSame( 400, $response->get_status() );
 		$this->assertSame( 'error', $data['result'] );
 		$this->assertSame( 'invalid_email', $data['error_code'] );
-		$this->assertSame( 'Bitte gib eine gültige E-Mail-Adresse ein.', $data['message'] );
+		$this->assertSame( 'Please enter a valid email address.', $data['message'] );
 		$this->assertSame( 'invalid_email', $payload['result']['code'] );
 		$this->assertSame( 400, $payload['result']['status'] );
 	}
@@ -314,7 +314,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertSame( 429, $response->get_status() );
 		$this->assertSame( 'error', $data['result'] );
 		$this->assertSame( 'rate_limited', $data['error_code'] );
-		$this->assertSame( 'Bitte warte kurz, bevor du es noch einmal versuchst.', $data['message'] );
+		$this->assertSame( 'Please wait a moment before trying again.', $data['message'] );
 	}
 
 	public function test_rest_submission_configuration_error_returns_server_error_status(): void {
@@ -336,7 +336,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertSame( 500, $response->get_status() );
 		$this->assertSame( 'error', $data['result'] );
 		$this->assertSame( 'configuration_error', $data['error_code'] );
-		$this->assertSame( 'Die Anmeldung konnte leider nicht abgeschlossen werden. Bitte versuche es später erneut.', $data['message'] );
+		$this->assertSame( 'The subscription could not be completed. Please try again later.', $data['message'] );
 	}
 
 	public function test_rest_submission_success_returns_json_redirect_with_result(): void {
@@ -346,8 +346,8 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'base_url'        => 'https://newsletter.example.test',
 				'api_token'       => 'api:token',
 				'list_ids'        => '3',
-				'success_message' => 'Danke!',
-				'error_message'   => 'Fehler!',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
 			]
 		);
 
@@ -371,10 +371,10 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertStringContainsString( 'listmonk_signup_result=', $data['redirect_url'] );
 		$this->assertSame( 'success', $data['result'] );
-		$this->assertSame( 'Danke!', $data['message'] );
+		$this->assertSame( 'Thanks!', $data['message'] );
 		$this->assertNull( $data['error_code'] );
 		$this->assertSame( 'success', $payload['result']['type'] );
-		$this->assertSame( 'Danke!', $payload['result']['message'] );
+		$this->assertSame( 'Thanks!', $payload['result']['message'] );
 		$this->assertCount( 1, $this->requests );
 	}
 
@@ -385,8 +385,8 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'base_url'        => 'https://newsletter.example.test',
 				'api_token'       => 'api:token',
 				'list_ids'        => '3',
-				'success_message' => 'Danke!',
-				'error_message'   => 'Fehler!',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
 			]
 		);
 
@@ -423,7 +423,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertSame( 'success', $payload['result']['type'] );
-		$this->assertSame( 'Danke!', $payload['result']['message'] );
+		$this->assertSame( 'Thanks!', $payload['result']['message'] );
 		$this->assertCount( 2, $this->requests );
 		$this->assertStringStartsWith( 'https://newsletter.example.test/api/subscribers?', $this->requests[1]['url'] );
 	}
@@ -435,8 +435,8 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'base_url'        => 'https://newsletter.example.test',
 				'api_token'       => 'api:token',
 				'list_ids'        => '3',
-				'success_message' => 'Danke!',
-				'error_message'   => 'Fehler!',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
 			]
 		);
 
@@ -492,8 +492,8 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'base_url'        => 'https://newsletter.example.test',
 				'api_token'       => 'api:token',
 				'list_ids'        => "3\n7\n9\n11",
-				'success_message' => 'Danke!',
-				'error_message'   => 'Fehler!',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
 			]
 		);
 
@@ -581,8 +581,8 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'base_url'        => 'https://newsletter.example.test',
 				'api_token'       => 'api:token',
 				'list_ids'        => '3',
-				'success_message' => 'Danke!',
-				'error_message'   => 'Fehler!',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
 			]
 		);
 
@@ -610,8 +610,8 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertSame( 500, $response->get_status() );
 		$this->assertSame( 'error', $data['result'] );
 		$this->assertSame( 'subscription_failed', $data['error_code'] );
-		$this->assertSame( 'Fehler!', $data['message'] );
-		$this->assertSame( 'Fehler!', $payload['result']['message'] );
+		$this->assertSame( 'Error!', $data['message'] );
+		$this->assertSame( 'Error!', $payload['result']['message'] );
 	}
 
 	public function test_shortcode_consumes_result_once_and_restores_values(): void {
@@ -619,7 +619,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		set_transient(
 			'listmonk_signup_result_' . $token,
 			[
-				'result' => [ 'type' => 'error', 'message' => 'Bitte gib eine gültige E-Mail-Adresse ein.' ],
+				'result' => [ 'type' => 'error', 'message' => 'Please enter a valid email address.' ],
 				'values' => [ 'email' => 'ada@example.test', 'vorname' => 'Ada', 'bezirke' => [ '1020' ] ],
 			],
 			300
@@ -653,7 +653,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'name'    => 'Ada Lovelace',
 				'status'  => 'enabled',
 				'lists'   => [ 3 ],
-				'attribs' => [ 'anrede' => 'Liebe', 'vorname' => 'Ada', 'nachname' => 'Lovelace', 'bezirke' => [] ],
+				'attribs' => [ 'anrede' => 'Dear', 'vorname' => 'Ada', 'nachname' => 'Lovelace', 'bezirke' => [] ],
 			],
 			json_decode( $this->requests[0]['args']['body'], true )
 		);
@@ -683,7 +683,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		delete_option( 'listmonk_signup_api_failures' );
 		$this->mock_http_responses(
 			[
-				[ 'response' => [ 'code' => 409 ], 'body' => '{"message":"E-Mail existiert bereits."}' ],
+				[ 'response' => [ 'code' => 409 ], 'body' => '{"message":"Email already exists."}' ],
 				[
 					'response' => [ 'code' => 200 ],
 					'body'     => wp_json_encode(
@@ -773,7 +773,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'listmonk_signup_result=old', $result['redirect_url'] );
 		$payload = $this->redirect_payload_from_url( $result['redirect_url'] );
 		$this->assertSame( 'error', $payload['result']['type'] );
-		$this->assertSame( 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal.', $payload['result']['message'] );
+		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $payload['result']['message'] );
 		$this->assertSame( 'Ada', $payload['values']['vorname'] );
 	}
 
@@ -784,8 +784,8 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'base_url'        => 'https://newsletter.example.test',
 				'api_token'       => 'api:token',
 				'list_ids'        => '3',
-				'success_message' => 'Danke!',
-				'error_message'   => 'Fehler!',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
 			]
 		);
 
@@ -799,7 +799,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$result  = $this->process_submission_payload( $input );
 		$payload = $this->redirect_payload_from_url( $result['redirect_url'] );
 		$this->assertSame( 'error', $payload['result']['type'] );
-		$this->assertSame( 'Bitte bestätige, dass du den Newsletter abonnieren möchtest.', $payload['result']['message'] );
+		$this->assertSame( 'Please confirm that you want to subscribe to the newsletter.', $payload['result']['message'] );
 		$this->assertSame( 'ada@example.test', $payload['values']['email'] );
 
 		$input['listmonk_submission_token'] = $this->call_private( 'create_submission_token' );
@@ -809,7 +809,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$result  = $this->process_submission_payload( $input );
 		$payload = $this->redirect_payload_from_url( $result['redirect_url'] );
 		$this->assertSame( 'error', $payload['result']['type'] );
-		$this->assertSame( 'Fehler!', $payload['result']['message'] );
+		$this->assertSame( 'Error!', $payload['result']['message'] );
 		$this->assertSame( 'ada@example.test', $payload['values']['email'] );
 	}
 
@@ -820,8 +820,8 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'base_url'        => 'https://newsletter.example.test',
 				'api_token'       => 'api:token',
 				'list_ids'        => '3',
-				'success_message' => 'Danke!',
-				'error_message'   => 'Fehler!',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
 			]
 		);
 
@@ -844,7 +844,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'listmonk_signup_result=', $result['redirect_url'] );
 		$payload = $this->redirect_payload_from_url( $result['redirect_url'] );
 		$this->assertSame( 'success', $payload['result']['type'] );
-		$this->assertSame( 'Danke!', $payload['result']['message'] );
+		$this->assertSame( 'Thanks!', $payload['result']['message'] );
 
 		$this->assertCount( 1, $this->requests );
 		$this->assertSame( 'https://newsletter.example.test/api/subscribers', $this->requests[0]['url'] );
@@ -860,8 +860,8 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'base_url'        => 'https://newsletter.example.test',
 				'api_token'       => 'api:token',
 				'list_ids'        => '3',
-				'success_message' => 'Danke!',
-				'error_message'   => 'Fehler!',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
 				'debug_logging'   => '1',
 			]
 		);
@@ -922,13 +922,13 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$payload = $this->redirect_payload_from_url( $result['redirect_url'] );
 		$this->assertSame( [], $this->requests );
 		$this->assertSame( 'error', $payload['result']['type'] );
-		$this->assertSame( 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal.', $payload['result']['message'] );
+		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $payload['result']['message'] );
 		$this->assertSame( 'ada@example.test', $payload['values']['email'] );
 		$this->assertSame( 'Ada', $payload['values']['vorname'] );
 	}
 
 	public function test_honeypot_short_circuits_as_success_without_http_or_token(): void {
-		update_option( 'listmonk_signup_settings', [ 'success_message' => 'Danke!' ] );
+		update_option( 'listmonk_signup_settings', [ 'success_message' => 'Thanks!' ] );
 		$result = $this->process_submission_payload(
 		[
 			'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
@@ -942,7 +942,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$payload = $this->redirect_payload_from_url( $result['redirect_url'] );
 		$this->assertSame( [], $this->requests );
 		$this->assertSame( 'success', $payload['result']['type'] );
-		$this->assertSame( 'Danke!', $payload['result']['message'] );
+		$this->assertSame( 'Thanks!', $payload['result']['message'] );
 	}
 
 	public function test_debug_logs_caps_and_clear_logs(): void {
@@ -989,9 +989,9 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->plugin->render_settings_page();
 		$html = (string) ob_get_clean();
 
-		$this->assertStringContainsString( 'API-Hinweise', $html );
+		$this->assertStringContainsString( 'API notices', $html );
 		$this->assertStringContainsString( 'Failure', $html );
-		$this->assertStringContainsString( 'Logs löschen', $html );
+		$this->assertStringContainsString( 'Clear logs', $html );
 		$this->assertStringContainsString( 'name="listmonk_clear_logs"', $html );
 		$this->assertStringNotContainsString( 'ada@example.test', $html );
 	}

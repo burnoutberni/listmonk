@@ -1,0 +1,215 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Listmonk Signup 1.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-29 00:00+0000\n"
+"PO-Revision-Date: 2026-09-29 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: de_DE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: OpenCode\n"
+"X-Domain: listmonk-signup\n"
+
+msgid "Listmonk Signup"
+msgstr "Listmonk Signup"
+
+msgid "Thank you! Please check your email inbox and confirm your subscription."
+msgstr "Vielen Dank! Bitte prüfe dein E-Mail-Postfach und bestätige deine Anmeldung."
+
+msgid "The subscription could not be completed. Please try again later."
+msgstr "Die Anmeldung konnte leider nicht abgeschlossen werden. Bitte versuche es später erneut."
+
+msgid "I want to subscribe to the newsletter and accept that my information will be processed to send the newsletter. You can find details in the privacy policy. I can unsubscribe at any time."
+msgstr "Ich möchte den Newsletter abonnieren und akzeptiere, dass meine Angaben zur Zusendung des Newsletters verarbeitet werden. Hinweise findest du in der Datenschutzerklärung. Ich kann mich jederzeit wieder abmelden."
+
+msgid "3., Landstrasse"
+msgstr "3., Landstraße"
+
+msgid "18., Waehring"
+msgstr "18., Währing"
+
+msgid "19., Doebling"
+msgstr "19., Döbling"
+
+msgid "Listmonk base URL must start with https://."
+msgstr "Die Listmonk-Basis-URL muss mit https:// beginnen."
+
+msgid "Listmonk API credential is required and must use api_user:token format."
+msgstr "Der Listmonk-API-Zugang ist erforderlich und muss das Format api_user:token verwenden."
+
+msgid "Listmonk API credential must use api_user:token format."
+msgstr "Der Listmonk-API-Zugang muss das Format api_user:token verwenden."
+
+msgid "At least one numeric Listmonk list ID is required."
+msgstr "Mindestens eine numerische Listmonk-Listen-ID ist erforderlich."
+
+msgid "Listmonk Signup logs and API notices were deleted."
+msgstr "Listmonk Signup Logs und API-Hinweise wurden gelöscht."
+
+msgid "At least one Listmonk API request could not be completed."
+msgstr "Mindestens eine Listmonk API-Anfrage konnte nicht abgeschlossen werden."
+
+msgid "Please check the Listmonk API credentials and logs. The notices are removed with \"Clear logs\"."
+msgstr "Bitte Listmonk API-Zugang und Logs prüfen. Die Hinweise werden mit „Logs löschen“ entfernt."
+
+msgid "Listmonk Base URL"
+msgstr "Listmonk-Basis-URL"
+
+msgid "Listmonk API User + Token"
+msgstr "Listmonk API-Benutzer + Token"
+
+msgid "Saved - leave empty to keep"
+msgstr "Gespeichert - leer lassen, um beizubehalten"
+
+msgid "Required. Listmonk expects <code>api_user:token</code>, for example <code>newsletter_api:abc123...</code>. The signup uses the authenticated subscriber API so attributes are saved directly."
+msgstr "Erforderlich. Listmonk erwartet <code>api_user:token</code>, z. B. <code>newsletter_api:abc123...</code>. Die Anmeldung verwendet die authentifizierte Subscriber API, damit Attribute direkt gespeichert werden."
+
+msgid "List IDs"
+msgstr "Listen-IDs"
+
+msgid "One numeric list ID per line or comma-separated. Default: 3."
+msgstr "Eine numerische Listen-ID pro Zeile oder kommagetrennt. Standard: 3."
+
+msgid "Success message"
+msgstr "Erfolgsmeldung"
+
+msgid "Error message"
+msgstr "Fehlermeldung"
+
+msgid "Consent text"
+msgstr "Consent-Text"
+
+msgid "Safe HTML such as links is allowed."
+msgstr "Sicheres HTML wie Links ist erlaubt."
+
+msgid "Temporary debug logging"
+msgstr "Temporäres Debug Logging"
+
+msgid "Store Listmonk API debug logs"
+msgstr "Listmonk API Debug Logs speichern"
+
+msgid "Enable only briefly for testing. No API tokens are stored, but technical API responses and shortened email addresses can be visible."
+msgstr "Nur kurz zum Testen aktivieren. Es werden keine API Tokens gespeichert, aber technische API-Antworten und E-Mail-Adressen können in gekürzter Form sichtbar sein."
+
+msgid "Debug logs"
+msgstr "Debug Logs"
+
+msgid "The latest %s entries from the temporary plugin logging."
+msgstr "Die letzten %s Einträge aus dem temporären Plugin-Logging."
+
+msgid "No logs available."
+msgstr "Keine Logs vorhanden."
+
+msgid "Time"
+msgstr "Zeit"
+
+msgid "Message"
+msgstr "Nachricht"
+
+msgid "Context"
+msgstr "Kontext"
+
+msgid "API notices"
+msgstr "API-Hinweise"
+
+msgid "The latest %s Listmonk API notices, even when temporary debug logging is disabled."
+msgstr "Die letzten %s Listmonk API-Hinweise, auch wenn temporäres Debug Logging deaktiviert ist."
+
+msgid "No API notices available."
+msgstr "Keine API-Hinweise vorhanden."
+
+msgid "Clear logs"
+msgstr "Logs löschen"
+
+msgid "Your session has expired. Please reload the page and try again."
+msgstr "Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal."
+
+msgid "Please enter a valid email address."
+msgstr "Bitte gib eine gültige E-Mail-Adresse ein."
+
+msgid "Please confirm that you want to subscribe to the newsletter."
+msgstr "Bitte bestätige, dass du den Newsletter abonnieren möchtest."
+
+msgid "Please wait a moment before trying again."
+msgstr "Bitte warte kurz, bevor du es noch einmal versuchst."
+
+msgid "Email"
+msgstr "E-Mail"
+
+msgid "Email address *"
+msgstr "E-Mail-Adresse *"
+
+msgid "Optional: How should we address you?"
+msgstr "Optional: Wie sollen wir dich ansprechen?"
+
+msgid "Salutation"
+msgstr "Anrede"
+
+msgid "Dear"
+msgstr "Liebe"
+
+msgid "First name"
+msgstr "Vorname"
+
+msgid "Last name"
+msgstr "Nachname"
+
+msgid "Optional: Which districts are you interested in?"
+msgstr "Optional: Welche Bezirke interessieren dich?"
+
+msgid "If you select one or more districts, you agree that we may use your email address to send you information about local initiatives in these districts in the future."
+msgstr "Wenn du einen oder mehrere Bezirke auswählst, stimmst du zu, dass wir deine E-Mail-Adresse verwenden dürfen, um dir in Zukunft Informationen zu lokalen Initiativen in diesen Bezirken zu schicken."
+
+msgid "Consent"
+msgstr "Zustimmung"
+
+msgid "Website"
+msgstr "Website"
+
+msgid "Submit now!"
+msgstr "Jetzt abschicken!"
+
+msgid "Subscribe to newsletter"
+msgstr "Newsletter abonnieren"
+
+msgid "Listmonk Subscriber API failed: %s"
+msgstr "Listmonk Subscriber API fehlgeschlagen: %s"
+
+msgid "Listmonk Subscriber API returned an error status."
+msgstr "Listmonk Subscriber API hat einen Fehlerstatus zurückgegeben."
+
+msgid "Listmonk Subscriber API conflict recovery failed: subscriber ID missing."
+msgstr "Listmonk Subscriber API Konflikt-Wiederherstellung fehlgeschlagen: Subscriber-ID fehlt."
+
+msgid "Listmonk Subscriber Lookup API failed: %s"
+msgstr "Listmonk Subscriber Lookup API fehlgeschlagen: %s"
+
+msgid "Listmonk Subscriber Lookup API returned an error status."
+msgstr "Listmonk Subscriber Lookup API hat einen Fehlerstatus zurückgegeben."
+
+msgid "Listmonk Subscriber API conflict recovery failed: exact subscriber not found."
+msgstr "Listmonk Subscriber API Konflikt-Wiederherstellung fehlgeschlagen: Exakter Subscriber wurde nicht gefunden."
+
+msgid "Listmonk Lists API failed: %s"
+msgstr "Listmonk Lists API fehlgeschlagen: %s"
+
+msgid "Listmonk Lists API returned an error status."
+msgstr "Listmonk Lists API hat einen Fehlerstatus zurückgegeben."
+
+msgid "Listmonk Subscriber API conflict recovery failed: target list opt-in metadata missing."
+msgstr "Listmonk Subscriber API Konflikt-Wiederherstellung fehlgeschlagen: Opt-in-Metadaten der Zielliste fehlen."
+
+msgid "Listmonk Subscriber Lists API failed: %s"
+msgstr "Listmonk Subscriber Lists API fehlgeschlagen: %s"
+
+msgid "Listmonk Subscriber Lists API returned an error status."
+msgstr "Listmonk Subscriber Lists API hat einen Fehlerstatus zurückgegeben."
+
+msgid "Listmonk Subscriber Opt-in API failed: %s"
+msgstr "Listmonk Subscriber Opt-in API fehlgeschlagen: %s"
+
+msgid "Listmonk Subscriber Opt-in API returned an error status."
+msgstr "Listmonk Subscriber Opt-in API hat einen Fehlerstatus zurückgegeben."

@@ -37,7 +37,7 @@
 			message.setAttribute('role', 'status');
 			form.insertBefore(message, form.firstChild);
 		}
-		message.textContent = 'Die Anmeldung konnte leider nicht abgeschlossen werden. Bitte versuche es später erneut.';
+		message.textContent = window.listmonkSignup && window.listmonkSignup.errorMessage ? window.listmonkSignup.errorMessage : 'The subscription could not be completed. Please try again later.';
 	}
 
 	document.addEventListener('submit', function (event) {
