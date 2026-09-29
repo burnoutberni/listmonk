@@ -34,7 +34,7 @@ The form submits JSON to the public WordPress REST route `/wp-json/listmonk-sign
 
 The signup uses authenticated `POST /api/subscribers` with `email`, optional `name`, `status: "enabled"`, numeric `lists`, and `attribs` for `anrede`, `vorname`, `nachname`, and `bezirke`. `bezirke` is stored as an array of Vienna postal-code strings, for example `["1020", "1070"]`. The plugin does not send `preconfirm_subscriptions`, so Listmonk list settings control double opt-in behavior.
 
-The plugin does not use the public subscription endpoint and does not perform a separate subscriber lookup or attribute PATCH. Existing subscribers are sent through the same subscriber API request so Listmonk can update attributes and list membership according to its API behavior.
+The plugin does not use the public subscription endpoint and does not perform a separate attribute PATCH. New subscribers are created through the subscriber API request. If Listmonk returns a `409` because the subscriber already exists, the plugin looks up the existing subscriber by email, verifies current list membership, adds any missing lists with the correct confirmed or unconfirmed status based on each list's opt-in setting, and sends an opt-in request when a double opt-in list needs confirmation.
 
 The salutation field shows the translated value for `Dear` as a placeholder, not as a prefilled value. If a visitor provides a first or last name but leaves salutation empty, the plugin stores the translated value for `Dear`; if they ignore the personalization fields entirely, salutation stays empty.
 
