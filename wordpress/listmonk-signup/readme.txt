@@ -4,7 +4,7 @@ Tags: newsletter, listmonk, signup, shortcode, email
 Requires at least: 6.4
 Tested up to: 7.0.4
 Requires PHP: 8.1
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: AGPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -56,6 +56,9 @@ Use the Listmonk API credential in `api_user:token` format.
 
 == Changelog ==
 
+= 1.1.1 =
+* Internationalized plugin strings and added German translations.
+
 = 1.1.0 =
 * Improved signup submission handling and frontend REST-based flow.
 * Added stronger nonce, submission token, honeypot, and rate-limit protections.
@@ -65,6 +68,9 @@ Use the Listmonk API credential in `api_user:token` format.
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.1.1 =
+Adds WordPress translation support and German language files.
 
 = 1.1.0 =
 Includes substantial signup flow, security, logging, and test coverage improvements. Review settings after updating and clear temporary debug logs if enabled.
