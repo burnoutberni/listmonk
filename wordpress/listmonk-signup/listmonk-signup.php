@@ -975,6 +975,10 @@ final class Listmonk_Signup {
 		$list_ids = [];
 		foreach ( is_array( $lists ) ? $lists : [] as $list ) {
 			if ( is_array( $list ) && isset( $list['id'] ) ) {
+				if ( 'unsubscribed' === ( $list['subscription_status'] ?? '' ) ) {
+					continue;
+				}
+
 				$list_ids[] = absint( $list['id'] );
 			} elseif ( is_numeric( $list ) ) {
 				$list_ids[] = absint( $list );
