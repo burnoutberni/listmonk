@@ -19,6 +19,8 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$_SERVER['REMOTE_ADDR'] = '203.0.113.10';
 		wp_dequeue_style( 'listmonk-signup' );
 		wp_deregister_style( 'listmonk-signup' );
+		wp_dequeue_script( 'listmonk-signup' );
+		wp_deregister_script( 'listmonk-signup' );
 
 		delete_option( 'listmonk_signup_settings' );
 		delete_option( 'listmonk_signup_logs' );
@@ -26,6 +28,16 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 
 		add_filter( 'listmonk_signup_should_exit', '__return_false' );
 		add_filter( 'wp_redirect', [ $this, 'capture_redirect' ], 10, 2 );
+	}
+
+	public function test_admin_post_hooks_are_not_registered_and_rest_route_is_registered(): void {
+		$this->assertFalse( has_action( 'admin_post_nopriv_listmonk_signup' ) );
+		$this->assertFalse( has_action( 'admin_post_listmonk_signup' ) );
+
+		do_action( 'rest_api_init' );
+		$routes = rest_get_server()->get_routes();
+
+		$this->assertArrayHasKey( '/listmonk-signup/v1/submit', $routes );
 	}
 
 	public function tear_down(): void {
@@ -50,6 +62,9 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 
 		$settings = get_option( 'listmonk_signup_settings' );
 		$this->assertSame( 'https://newsletter.example.com', $settings['base_url'] );
+		$this->assertArrayNotHasKey( 'success_message', $settings );
+		$this->assertArrayNotHasKey( 'error_message', $settings );
+		$this->assertArrayNotHasKey( 'consent_text', $settings );
 
 		$settings['base_url'] = 'https://example.test';
 		update_option( 'listmonk_signup_settings', $settings );
@@ -75,9 +90,9 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'base_url'        => 'https://newsletter.example.test/',
 				'api_token'       => '',
 				'list_ids'        => "3, invalid\n7 3 0",
-				'success_message' => '<b>Danke</b>',
-				'error_message'   => '<script>no</script>Fehler',
-				'consent_text'    => '<a href="https://example.test">Datenschutz</a><script>bad</script>',
+				'success_message' => '<b>Thanks</b>',
+				'error_message'   => '<script>no</script>Error',
+				'consent_text'    => '<a href="https://example.test">Privacy</a><script>bad</script>',
 				'debug_logging'   => '1',
 			]
 		);
@@ -85,9 +100,9 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertSame( 'https://newsletter.example.test', $settings['base_url'] );
 		$this->assertSame( 'api:previous-token', $settings['api_token'] );
 		$this->assertSame( "3\n7", $settings['list_ids'] );
-		$this->assertSame( 'Danke', $settings['success_message'] );
-		$this->assertStringContainsString( 'Fehler', $settings['error_message'] );
-		$this->assertStringContainsString( '<a href="https://example.test">Datenschutz</a>', $settings['consent_text'] );
+		$this->assertSame( 'Thanks', $settings['success_message'] );
+		$this->assertStringContainsString( 'Error', $settings['error_message'] );
+		$this->assertStringContainsString( '<a href="https://example.test">Privacy</a>', $settings['consent_text'] );
 		$this->assertStringNotContainsString( '<script>', $settings['consent_text'] );
 		$this->assertSame( '1', $settings['debug_logging'] );
 		$this->assertSame( [], get_settings_errors( 'listmonk_signup_settings' ) );
@@ -133,7 +148,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 			'sanitize_frontend_values',
 			[
 				[
-					'anrede'   => '<b>Liebe</b>',
+					'anrede'   => '<b>Dear</b>',
 					'vorname'  => '<i>Ada</i>',
 					'nachname' => 'Lovelace<script>',
 					'email'    => 'ADA@EXAMPLE.TEST ',
@@ -143,7 +158,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 			]
 		);
 
-		$this->assertSame( 'Liebe', $values['anrede'] );
+		$this->assertSame( 'Dear', $values['anrede'] );
 		$this->assertSame( 'Ada', $values['vorname'] );
 		$this->assertSame( 'Lovelace', $values['nachname'] );
 		$this->assertSame( 'ADA@EXAMPLE.TEST', $values['email'] );
@@ -157,7 +172,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertSame( [ '1010', '1230' ], $this->call_private( 'selected_district_postal_codes', [ [ '1010', '9999', '1230' ] ] ) );
 		$this->assertSame( [ 3, 7 ], $this->call_private( 'parse_list_ids', [ 'bad 3 07 7 3 0' ] ) );
 		$this->assertSame(
-			[ 'anrede' => 'Liebe', 'vorname' => 'Ada', 'nachname' => 'Lovelace', 'bezirke' => [ '1020' ] ],
+			[ 'anrede' => 'Dear', 'vorname' => 'Ada', 'nachname' => 'Lovelace', 'bezirke' => [ '1020' ] ],
 			$this->call_private( 'subscriber_attribs', [ [ 'anrede' => '', 'vorname' => 'Ada', 'nachname' => 'Lovelace', 'bezirke' => [ '1020' ] ] ] )
 		);
 
@@ -182,8 +197,12 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$html = $this->plugin->render_shortcode();
 
 		$this->assertTrue( wp_style_is( 'listmonk-signup', 'enqueued' ) );
+		$this->assertTrue( wp_script_is( 'listmonk-signup', 'enqueued' ) );
+		$this->assertStringContainsString( '"restNonce":"' . wp_create_nonce( 'wp_rest' ) . '"', (string) wp_scripts()->get_data( 'listmonk-signup', 'data' ) );
 		$this->assertStringNotContainsString( '<style>', $html );
-		$this->assertStringContainsString( 'name="action" value="listmonk_signup"', $html );
+		$this->assertStringNotContainsString( 'admin-post.php', $html );
+		$this->assertStringNotContainsString( 'name="action" value="listmonk_signup"', $html );
+		$this->assertStringContainsString( 'data-listmonk-rest-url="' . esc_url( rest_url( 'listmonk-signup/v1/submit' ) ) . '"', $html );
 		$this->assertStringContainsString( 'name="listmonk_signup_nonce"', $html );
 		$this->assertStringContainsString( 'name="listmonk_submission_token"', $html );
 		$this->assertStringContainsString( 'name="website"', $html );
@@ -210,29 +229,709 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 					'base_url'        => 'https://newsletter.example.test',
 					'api_token'       => $case['api_token'],
 					'list_ids'        => $case['list_ids'],
-					'success_message' => 'Danke!',
-					'error_message'   => 'Fehler!',
+					'success_message' => 'Thanks!',
+					'error_message'   => 'Error!',
 				]
 			);
 
-			$_POST = [
+			$result = $this->process_submission_payload(
+			[
 				'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
 				'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
 				'return_to' => home_url( '/newsletter/' ),
 				'email' => 'ada@example.test',
 				'consent' => '1',
-			];
+			]
+			);
 
-			try {
-				$this->plugin->handle_submission();
-				$this->fail( 'Expected redirect termination.' );
-			} catch ( RuntimeException $exception ) {
-				$payload = $this->redirect_payload();
-				$this->assertSame( 'error', $payload['result']['type'] );
-				$this->assertSame( 'Fehler!', $payload['result']['message'] );
-				$this->assertSame( [], $this->requests );
-			}
+			$payload = $this->redirect_payload_from_url( $result['redirect_url'] );
+			$this->assertSame( 'error', $payload['result']['type'] );
+			$this->assertSame( 'Error!', $payload['result']['message'] );
+			$this->assertSame( [], $this->requests );
 		}
+	}
+
+	public function test_rest_submission_bad_nonce_does_not_store_result_transient(): void {
+		$request = $this->rest_request(
+			[
+				'listmonk_signup_nonce' => 'bad-nonce',
+				'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+				'return_to' => home_url( '/newsletter/' ),
+				'email' => 'ada@example.test',
+				'consent' => '1',
+			]
+		);
+
+		$response = $this->plugin->handle_rest_submission( $request );
+		$data     = $response->get_data();
+
+		$this->assertSame( 403, $response->get_status() );
+		$this->assertArrayHasKey( 'redirect_url', $data );
+		$this->assertSame( 'error', $data['result'] );
+		$this->assertSame( 'invalid_nonce', $data['error_code'] );
+		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $data['message'] );
+		$this->assertNoSubmissionResultToken( $data['redirect_url'] );
+	}
+
+	public function test_rest_submission_invalid_submission_token_does_not_store_result_transient(): void {
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+				]
+			)
+		);
+		$data     = $response->get_data();
+
+		$this->assertSame( 403, $response->get_status() );
+		$this->assertSame( 'error', $data['result'] );
+		$this->assertSame( 'invalid_submission_token', $data['error_code'] );
+		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $data['message'] );
+		$this->assertNoSubmissionResultToken( $data['redirect_url'] );
+		$this->assertSame( [], $this->requests );
+	}
+
+	public function test_rest_submission_validation_returns_bad_request_status(): void {
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'bad-email',
+					'consent' => '1',
+				]
+			)
+		);
+		$data     = $response->get_data();
+		$payload  = $this->redirect_payload_from_url( $data['redirect_url'] );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'error', $data['result'] );
+		$this->assertSame( 'invalid_email', $data['error_code'] );
+		$this->assertSame( 'Please enter a valid email address.', $data['message'] );
+		$this->assertSame( 'invalid_email', $payload['result']['code'] );
+		$this->assertSame( 400, $payload['result']['status'] );
+	}
+
+	public function test_rest_submission_rate_limit_returns_too_many_requests_status(): void {
+		set_transient( 'listmonk_signup_email_ip_' . hash( 'sha256', '203.0.113.10|ada@example.test' ), 5, 300 );
+
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+				]
+			)
+		);
+		$data     = $response->get_data();
+
+		$this->assertSame( 429, $response->get_status() );
+		$this->assertSame( 'error', $data['result'] );
+		$this->assertSame( 'rate_limited', $data['error_code'] );
+		$this->assertSame( 'Please wait a moment before trying again.', $data['message'] );
+	}
+
+	public function test_rest_submission_configuration_error_returns_server_error_status(): void {
+		update_option( 'listmonk_signup_settings', [ 'api_token' => '' ] );
+
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+				]
+			)
+		);
+		$data     = $response->get_data();
+
+		$this->assertSame( 500, $response->get_status() );
+		$this->assertSame( 'error', $data['result'] );
+		$this->assertSame( 'configuration_error', $data['error_code'] );
+		$this->assertSame( 'The subscription could not be completed. Please try again later.', $data['message'] );
+	}
+
+	public function test_rest_submission_success_returns_json_redirect_with_result(): void {
+		update_option(
+			'listmonk_signup_settings',
+			[
+				'base_url'        => 'https://newsletter.example.test',
+				'api_token'       => 'api:token',
+				'list_ids'        => '3',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
+			]
+		);
+
+		$this->mock_http_response( [ 'response' => [ 'code' => 200 ], 'body' => '{}' ] );
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+					'bezirke' => [ '1020' ],
+				]
+			)
+		);
+
+		$data    = $response->get_data();
+		$payload = $this->redirect_payload_from_url( $data['redirect_url'] );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertStringContainsString( 'listmonk_signup_result=', $data['redirect_url'] );
+		$this->assertSame( 'success', $data['result'] );
+		$this->assertSame( 'Thanks!', $data['message'] );
+		$this->assertNull( $data['error_code'] );
+		$this->assertSame( 'success', $payload['result']['type'] );
+		$this->assertSame( 'Thanks!', $payload['result']['message'] );
+		$this->assertCount( 1, $this->requests );
+	}
+
+	public function test_rest_duplicate_409_returns_success_after_existing_list_membership_verified(): void {
+		update_option(
+			'listmonk_signup_settings',
+			[
+				'base_url'        => 'https://newsletter.example.test',
+				'api_token'       => 'api:token',
+				'list_ids'        => '3',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
+			]
+		);
+
+		$this->mock_http_responses(
+			[
+				[ 'response' => [ 'code' => 409 ], 'body' => '{"message":"some conflict"}' ],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[ 'id' => 12, 'email' => 'ADA@example.test', 'lists' => [ [ 'id' => 3 ] ] ],
+								],
+							],
+						]
+					),
+				],
+			]
+		);
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+				]
+			)
+		);
+
+		$payload = $this->redirect_payload_from_url( $response->get_data()['redirect_url'] );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'success', $payload['result']['type'] );
+		$this->assertSame( 'Thanks!', $payload['result']['message'] );
+		$this->assertCount( 2, $this->requests );
+		$this->assertStringStartsWith( 'https://newsletter.example.test/api/subscribers?', $this->requests[1]['url'] );
+	}
+
+	public function test_rest_duplicate_409_resends_optin_for_existing_unconfirmed_double_optin_list(): void {
+		update_option(
+			'listmonk_signup_settings',
+			[
+				'base_url'        => 'https://newsletter.example.test',
+				'api_token'       => 'api:token',
+				'list_ids'        => '3',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
+			]
+		);
+
+		$this->mock_http_responses(
+			[
+				[ 'response' => [ 'code' => 409 ], 'body' => '{"message":"conflict"}' ],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[
+										'id'    => 12,
+										'email' => 'ada@example.test',
+										'lists' => [
+											[ 'id' => 3, 'optin' => 'double', 'subscription_status' => 'unconfirmed' ],
+										],
+									],
+								],
+							],
+						]
+					),
+				],
+				[ 'response' => [ 'code' => 200 ], 'body' => '{"data":true}' ],
+			]
+		);
+
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+				]
+			)
+		);
+
+		$payload = $this->redirect_payload_from_url( $response->get_data()['redirect_url'] );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'success', $payload['result']['type'] );
+		$this->assertCount( 3, $this->requests );
+		$this->assertSame( 'POST', $this->requests[2]['args']['method'] );
+		$this->assertSame( 'https://newsletter.example.test/api/subscribers/12/optin', $this->requests[2]['url'] );
+	}
+
+	public function test_rest_duplicate_409_adds_missing_lists_with_correct_statuses_and_sends_one_optin(): void {
+		update_option(
+			'listmonk_signup_settings',
+			[
+				'base_url'        => 'https://newsletter.example.test',
+				'api_token'       => 'api:token',
+				'list_ids'        => "3\n7\n9\n11",
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
+			]
+		);
+
+		$this->mock_http_responses(
+			[
+				[ 'response' => [ 'code' => 409 ], 'body' => '{"message":"conflict"}' ],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[ 'id' => 12, 'email' => 'ada@example.test', 'lists' => [ [ 'id' => 3 ] ] ],
+								],
+							],
+						]
+					),
+				],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[ 'id' => 7, 'optin' => 'single' ],
+									[ 'id' => 9, 'optin' => 'double' ],
+									[ 'id' => 11, 'optin' => 'double' ],
+								],
+							],
+						]
+					),
+				],
+				[ 'response' => [ 'code' => 200 ], 'body' => '{"data":true}' ],
+				[ 'response' => [ 'code' => 200 ], 'body' => '{"data":true}' ],
+				[ 'response' => [ 'code' => 200 ], 'body' => '{"data":true}' ],
+			]
+		);
+
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+				]
+			)
+		);
+
+		$payload = $this->redirect_payload_from_url( $response->get_data()['redirect_url'] );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'success', $payload['result']['type'] );
+		$this->assertCount( 6, $this->requests );
+		$this->assertStringStartsWith( 'https://newsletter.example.test/api/lists?', $this->requests[2]['url'] );
+		$this->assertSame( 'PUT', $this->requests[3]['args']['method'] );
+		$this->assertSame( 'https://newsletter.example.test/api/subscribers/lists', $this->requests[3]['url'] );
+		$this->assertSame(
+			[
+				'ids'             => [ 12 ],
+				'action'          => 'add',
+				'target_list_ids' => [ 7 ],
+				'status'          => 'confirmed',
+			],
+			json_decode( $this->requests[3]['args']['body'], true )
+		);
+		$this->assertSame( 'PUT', $this->requests[4]['args']['method'] );
+		$this->assertSame(
+			[
+				'ids'             => [ 12 ],
+				'action'          => 'add',
+				'target_list_ids' => [ 9, 11 ],
+				'status'          => 'unconfirmed',
+			],
+			json_decode( $this->requests[4]['args']['body'], true )
+		);
+		$this->assertSame( 'POST', $this->requests[5]['args']['method'] );
+		$this->assertSame( 'https://newsletter.example.test/api/subscribers/12/optin', $this->requests[5]['url'] );
+	}
+
+	public function test_rest_duplicate_409_sends_optin_for_mixed_existing_unconfirmed_and_missing_single_list(): void {
+		update_option(
+			'listmonk_signup_settings',
+			[
+				'base_url'        => 'https://newsletter.example.test',
+				'api_token'       => 'api:token',
+				'list_ids'        => "3\n7",
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
+			]
+		);
+
+		$this->mock_http_responses(
+			[
+				[ 'response' => [ 'code' => 409 ], 'body' => '{"message":"conflict"}' ],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[
+										'id'    => 12,
+										'email' => 'ada@example.test',
+										'lists' => [
+											[ 'id' => 3, 'optin' => 'double', 'subscription_status' => 'unconfirmed' ],
+										],
+									],
+								],
+							],
+						]
+					),
+				],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[ 'id' => 7, 'optin' => 'single' ],
+								],
+							],
+						]
+					),
+				],
+				[ 'response' => [ 'code' => 200 ], 'body' => '{"data":true}' ],
+				[ 'response' => [ 'code' => 200 ], 'body' => '{"data":true}' ],
+			]
+		);
+
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+				]
+			)
+		);
+
+		$payload = $this->redirect_payload_from_url( $response->get_data()['redirect_url'] );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'success', $payload['result']['type'] );
+		$this->assertCount( 5, $this->requests );
+		$this->assertStringStartsWith( 'https://newsletter.example.test/api/lists?', $this->requests[2]['url'] );
+		$this->assertSame( 'PUT', $this->requests[3]['args']['method'] );
+		$this->assertSame(
+			[
+				'ids'             => [ 12 ],
+				'action'          => 'add',
+				'target_list_ids' => [ 7 ],
+				'status'          => 'confirmed',
+			],
+			json_decode( $this->requests[3]['args']['body'], true )
+		);
+		$this->assertSame( 'POST', $this->requests[4]['args']['method'] );
+		$this->assertSame( 'https://newsletter.example.test/api/subscribers/12/optin', $this->requests[4]['url'] );
+	}
+
+	public function test_rest_duplicate_409_restores_unsubscribed_single_optin_list(): void {
+		update_option(
+			'listmonk_signup_settings',
+			[
+				'base_url'        => 'https://newsletter.example.test',
+				'api_token'       => 'api:token',
+				'list_ids'        => '7',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
+			]
+		);
+
+		$this->mock_http_responses(
+			[
+				[ 'response' => [ 'code' => 409 ], 'body' => '{"message":"conflict"}' ],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[
+										'id'    => 12,
+										'email' => 'ada@example.test',
+										'lists' => [
+											[ 'id' => 7, 'optin' => 'single', 'subscription_status' => 'unsubscribed' ],
+										],
+									],
+								],
+							],
+						]
+					),
+				],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[ 'id' => 7, 'optin' => 'single' ],
+								],
+							],
+						]
+					),
+				],
+				[ 'response' => [ 'code' => 200 ], 'body' => '{"data":true}' ],
+			]
+		);
+
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+				]
+			)
+		);
+
+		$payload = $this->redirect_payload_from_url( $response->get_data()['redirect_url'] );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'success', $payload['result']['type'] );
+		$this->assertCount( 4, $this->requests );
+		$this->assertStringStartsWith( 'https://newsletter.example.test/api/lists?', $this->requests[2]['url'] );
+		$this->assertSame( 'PUT', $this->requests[3]['args']['method'] );
+		$this->assertSame(
+			[
+				'ids'             => [ 12 ],
+				'action'          => 'add',
+				'target_list_ids' => [ 7 ],
+				'status'          => 'confirmed',
+			],
+			json_decode( $this->requests[3]['args']['body'], true )
+		);
+	}
+
+	public function test_rest_duplicate_409_restores_unsubscribed_double_optin_list_and_sends_optin(): void {
+		update_option(
+			'listmonk_signup_settings',
+			[
+				'base_url'        => 'https://newsletter.example.test',
+				'api_token'       => 'api:token',
+				'list_ids'        => '9',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
+			]
+		);
+
+		$this->mock_http_responses(
+			[
+				[ 'response' => [ 'code' => 409 ], 'body' => '{"message":"conflict"}' ],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[
+										'id'    => 12,
+										'email' => 'ada@example.test',
+										'lists' => [
+											[ 'id' => 9, 'optin' => 'double', 'subscription_status' => 'unsubscribed' ],
+										],
+									],
+								],
+							],
+						]
+					),
+				],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[ 'id' => 9, 'optin' => 'double' ],
+								],
+							],
+						]
+					),
+				],
+				[ 'response' => [ 'code' => 200 ], 'body' => '{"data":true}' ],
+				[ 'response' => [ 'code' => 200 ], 'body' => '{"data":true}' ],
+			]
+		);
+
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+				]
+			)
+		);
+
+		$payload = $this->redirect_payload_from_url( $response->get_data()['redirect_url'] );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'success', $payload['result']['type'] );
+		$this->assertCount( 5, $this->requests );
+		$this->assertStringStartsWith( 'https://newsletter.example.test/api/lists?', $this->requests[2]['url'] );
+		$this->assertSame( 'PUT', $this->requests[3]['args']['method'] );
+		$this->assertSame(
+			[
+				'ids'             => [ 12 ],
+				'action'          => 'add',
+				'target_list_ids' => [ 9 ],
+				'status'          => 'unconfirmed',
+			],
+			json_decode( $this->requests[3]['args']['body'], true )
+		);
+		$this->assertSame( 'POST', $this->requests[4]['args']['method'] );
+		$this->assertSame( 'https://newsletter.example.test/api/subscribers/12/optin', $this->requests[4]['url'] );
+	}
+
+	public function test_rest_duplicate_409_lookup_miss_returns_generic_error(): void {
+		update_option(
+			'listmonk_signup_settings',
+			[
+				'base_url'        => 'https://newsletter.example.test',
+				'api_token'       => 'api:token',
+				'list_ids'        => '3',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
+			]
+		);
+
+		$this->mock_http_responses(
+			[
+				[ 'response' => [ 'code' => 409 ], 'body' => '{"message":"already exists maybe"}' ],
+				[ 'response' => [ 'code' => 200 ], 'body' => '{"data":{"results":[]}}' ],
+			]
+		);
+
+		$response = $this->plugin->handle_rest_submission(
+			$this->rest_request(
+				[
+					'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
+					'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
+					'return_to' => home_url( '/newsletter/' ),
+					'email' => 'ada@example.test',
+					'consent' => '1',
+				]
+			)
+		);
+
+		$data    = $response->get_data();
+		$payload = $this->redirect_payload_from_url( $data['redirect_url'] );
+		$this->assertSame( 500, $response->get_status() );
+		$this->assertSame( 'error', $data['result'] );
+		$this->assertSame( 'subscription_failed', $data['error_code'] );
+		$this->assertSame( 'Error!', $data['message'] );
+		$this->assertSame( 'Error!', $payload['result']['message'] );
+	}
+
+	public function test_duplicate_409_lookup_checks_later_pages_for_exact_email(): void {
+		$settings = [ 'base_url' => 'https://newsletter.example.test', 'api_token' => 'api:token' ];
+		$page_one = [];
+		for ( $i = 1; $i <= 100; $i++ ) {
+			$page_one[] = [ 'id' => $i, 'email' => 'other' . $i . '@example.test' ];
+		}
+
+		$this->mock_http_responses(
+			[
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode( [ 'data' => [ 'results' => $page_one, 'total_pages' => 2 ] ] ),
+				],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode( [ 'data' => [ 'results' => [ [ 'id' => 123, 'email' => 'ADA@example.test' ] ], 'total_pages' => 2 ] ] ),
+				],
+			]
+		);
+
+		$subscriber = $this->call_private( 'find_listmonk_subscriber_by_email', [ $settings, 'ada@example.test', 'req-page' ] );
+
+		$this->assertSame( 123, $subscriber['id'] );
+		$this->assertCount( 2, $this->requests );
+		parse_str( (string) wp_parse_url( $this->requests[0]['url'], PHP_URL_QUERY ), $first_query );
+		parse_str( (string) wp_parse_url( $this->requests[1]['url'], PHP_URL_QUERY ), $second_query );
+		$this->assertSame( 'ada@example.test', $first_query['search'] );
+		$this->assertSame( '1', $first_query['page'] );
+		$this->assertSame( '100', $first_query['per_page'] );
+		$this->assertSame( '2', $second_query['page'] );
+	}
+
+	public function test_duplicate_409_lookup_exhausts_paginated_results_before_error(): void {
+		$settings = [ 'base_url' => 'https://newsletter.example.test', 'api_token' => 'api:token' ];
+		$page_one = [];
+		for ( $i = 1; $i <= 100; $i++ ) {
+			$page_one[] = [ 'id' => $i, 'email' => 'other' . $i . '@example.test' ];
+		}
+
+		$this->mock_http_responses(
+			[
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode( [ 'data' => [ 'results' => $page_one, 'total_pages' => 2 ] ] ),
+				],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode( [ 'data' => [ 'results' => [ [ 'id' => 101, 'email' => 'other101@example.test' ] ], 'total_pages' => 2 ] ] ),
+				],
+			]
+		);
+
+		$result = $this->call_private( 'find_listmonk_subscriber_by_email', [ $settings, 'ada@example.test', 'req-miss' ] );
+
+		$this->assertWPError( $result );
+		$this->assertCount( 2, $this->requests );
 	}
 
 	public function test_shortcode_consumes_result_once_and_restores_values(): void {
@@ -240,7 +939,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		set_transient(
 			'listmonk_signup_result_' . $token,
 			[
-				'result' => [ 'type' => 'error', 'message' => 'Bitte gib eine gültige E-Mail-Adresse ein.' ],
+				'result' => [ 'type' => 'error', 'message' => 'Please enter a valid email address.' ],
 				'values' => [ 'email' => 'ada@example.test', 'vorname' => 'Ada', 'bezirke' => [ '1020' ] ],
 			],
 			300
@@ -274,7 +973,7 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'name'    => 'Ada Lovelace',
 				'status'  => 'enabled',
 				'lists'   => [ 3 ],
-				'attribs' => [ 'anrede' => 'Liebe', 'vorname' => 'Ada', 'nachname' => 'Lovelace', 'bezirke' => [] ],
+				'attribs' => [ 'anrede' => 'Dear', 'vorname' => 'Ada', 'nachname' => 'Lovelace', 'bezirke' => [] ],
 			],
 			json_decode( $this->requests[0]['args']['body'], true )
 		);
@@ -298,6 +997,74 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertCount( 1, $failures );
 		$this->assertStringNotContainsString( 'ada@example.test', wp_json_encode( $failures ) );
 		$this->assertStringContainsString( '500', wp_json_encode( $failures ) );
+
+		remove_all_filters( 'pre_http_request' );
+		delete_option( 'listmonk_signup_logs' );
+		delete_option( 'listmonk_signup_api_failures' );
+		$this->mock_http_responses(
+			[
+				[ 'response' => [ 'code' => 409 ], 'body' => '{"message":"Email already exists."}' ],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[ 'id' => 12, 'email' => 'ada@example.test', 'lists' => [ [ 'id' => 3 ] ] ],
+								],
+							],
+						]
+					),
+				],
+			]
+		);
+		$this->assertTrue( $this->call_private( 'subscribe_via_subscribers_endpoint', [ $settings, [ 3 ], $values, 'req-3' ] ) );
+		$logs = get_option( 'listmonk_signup_logs' );
+		$this->assertSame( 'Subscriber API reported conflict; verifying existing subscriber state.', $logs[2]['message'] );
+		$this->assertSame( 'Subscriber lookup API response.', $logs[3]['message'] );
+		$this->assertSame( 'Existing subscriber already has requested list memberships; treating signup as successful.', $logs[4]['message'] );
+		$this->assertFalse( get_option( 'listmonk_signup_api_failures' ) );
+	}
+
+	public function test_duplicate_409_missing_list_update_failure_is_error(): void {
+		$settings = [ 'base_url' => 'https://newsletter.example.test', 'api_token' => 'api:token' ];
+		$values   = [ 'email' => 'ada@example.test', 'anrede' => '', 'vorname' => 'Ada', 'nachname' => 'Lovelace', 'bezirke' => [] ];
+
+		$this->mock_http_responses(
+			[
+				[ 'response' => [ 'code' => 409 ], 'body' => '{"message":"already exists"}' ],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[ 'id' => 12, 'email' => 'ada@example.test', 'lists' => [ [ 'id' => 3 ] ] ],
+								],
+							],
+						]
+					),
+				],
+				[
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'data' => [
+								'results' => [
+									[ 'id' => 7, 'optin' => 'double' ],
+								],
+							],
+						]
+					),
+				],
+				[ 'response' => [ 'code' => 500 ], 'body' => '{"message":"failed"}' ],
+			]
+		);
+
+		$this->assertWPError( $this->call_private( 'subscribe_via_subscribers_endpoint', [ $settings, [ 3, 7 ], $values, 'req-4' ] ) );
+		$this->assertCount( 4, $this->requests );
+		$this->assertSame( 'https://newsletter.example.test/api/subscribers/lists', $this->requests[3]['url'] );
+		$this->assertCount( 1, get_option( 'listmonk_signup_api_failures' ) );
 	}
 
 	public function test_rate_limiting_tracks_email_ip_and_ip_limits(): void {
@@ -313,24 +1080,21 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertTrue( $this->call_private( 'is_rate_limited', [ 'another@example.test' ] ) );
 	}
 
-	public function test_submission_validation_redirects_and_preserves_values(): void {
-		$_POST = [
+	public function test_submission_without_nonce_returns_retry_error_without_result_transient(): void {
+		$result = $this->process_submission_payload(
+		[
 			'return_to' => home_url( '/newsletter/?listmonk_signup_result=old' ),
 			'email'     => 'bad-email',
 			'vorname'   => 'Ada',
-		];
+		]
+		);
 
-		try {
-			$this->plugin->handle_submission();
-			$this->fail( 'Expected redirect termination.' );
-		} catch ( RuntimeException $exception ) {
-			$this->assertStringStartsWith( home_url( '/newsletter/?' ), $this->last_redirect );
-			$this->assertStringNotContainsString( 'listmonk_signup_result=old', $this->last_redirect );
-			$payload = $this->redirect_payload();
-			$this->assertSame( 'error', $payload['result']['type'] );
-			$this->assertSame( 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal.', $payload['result']['message'] );
-			$this->assertSame( 'Ada', $payload['values']['vorname'] );
-		}
+		$this->assertSame( home_url( '/newsletter/' ), $result['redirect_url'] );
+		$this->assertStringNotContainsString( 'listmonk_signup_result=old', $result['redirect_url'] );
+		$this->assertNoSubmissionResultToken( $result['redirect_url'] );
+		$this->assertSame( 'error', $result['result']['type'] );
+		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $result['result']['message'] );
+		$this->assertSame( 'Ada', $result['values']['vorname'] );
 	}
 
 	public function test_submission_rejects_missing_consent_and_subscriber_api_failures(): void {
@@ -340,42 +1104,33 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'base_url'        => 'https://newsletter.example.test',
 				'api_token'       => 'api:token',
 				'list_ids'        => '3',
-				'success_message' => 'Danke!',
-				'error_message'   => 'Fehler!',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
 			]
 		);
 
-		$_POST = [
+		$input = [
 			'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
 			'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
 			'return_to' => home_url( '/newsletter/' ),
 			'email' => 'ada@example.test',
 		];
 
-		try {
-			$this->plugin->handle_submission();
-			$this->fail( 'Expected redirect termination.' );
-		} catch ( RuntimeException $exception ) {
-			$payload = $this->redirect_payload();
-			$this->assertSame( 'error', $payload['result']['type'] );
-			$this->assertSame( 'Bitte bestätige, dass du den Newsletter abonnieren möchtest.', $payload['result']['message'] );
-			$this->assertSame( 'ada@example.test', $payload['values']['email'] );
-		}
+		$result  = $this->process_submission_payload( $input );
+		$payload = $this->redirect_payload_from_url( $result['redirect_url'] );
+		$this->assertSame( 'error', $payload['result']['type'] );
+		$this->assertSame( 'Please confirm that you want to subscribe to the newsletter.', $payload['result']['message'] );
+		$this->assertSame( 'ada@example.test', $payload['values']['email'] );
 
-		$this->last_redirect = '';
-		$_POST['listmonk_submission_token'] = $this->call_private( 'create_submission_token' );
-		$_POST['consent'] = '1';
+		$input['listmonk_submission_token'] = $this->call_private( 'create_submission_token' );
+		$input['consent'] = '1';
 		$this->mock_http_response( [ 'response' => [ 'code' => 500 ], 'body' => 'error' ] );
 
-		try {
-			$this->plugin->handle_submission();
-			$this->fail( 'Expected redirect termination.' );
-		} catch ( RuntimeException $exception ) {
-			$payload = $this->redirect_payload();
-			$this->assertSame( 'error', $payload['result']['type'] );
-			$this->assertSame( 'Fehler!', $payload['result']['message'] );
-			$this->assertSame( 'ada@example.test', $payload['values']['email'] );
-		}
+		$result  = $this->process_submission_payload( $input );
+		$payload = $this->redirect_payload_from_url( $result['redirect_url'] );
+		$this->assertSame( 'error', $payload['result']['type'] );
+		$this->assertSame( 'Error!', $payload['result']['message'] );
+		$this->assertSame( 'ada@example.test', $payload['values']['email'] );
 	}
 
 	public function test_successful_submission_calls_subscriber_api(): void {
@@ -385,14 +1140,14 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'base_url'        => 'https://newsletter.example.test',
 				'api_token'       => 'api:token',
 				'list_ids'        => '3',
-				'success_message' => 'Danke!',
-				'error_message'   => 'Fehler!',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
 			]
 		);
 
 		$nonce = wp_create_nonce( 'listmonk_signup_submit' );
 		$token = $this->call_private( 'create_submission_token' );
-		$_POST = [
+		$input = [
 			'listmonk_signup_nonce' => $nonce,
 			'listmonk_submission_token' => $token,
 			'return_to' => home_url( '/newsletter/' ),
@@ -405,15 +1160,11 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 
 		$this->mock_http_response( [ 'response' => [ 'code' => 200 ], 'body' => '{}' ] );
 
-		try {
-			$this->plugin->handle_submission();
-			$this->fail( 'Expected redirect termination.' );
-		} catch ( RuntimeException $exception ) {
-			$this->assertStringContainsString( 'listmonk_signup_result=', $this->last_redirect );
-			$payload = $this->redirect_payload();
-			$this->assertSame( 'success', $payload['result']['type'] );
-			$this->assertSame( 'Danke!', $payload['result']['message'] );
-		}
+		$result = $this->process_submission_payload( $input );
+		$this->assertStringContainsString( 'listmonk_signup_result=', $result['redirect_url'] );
+		$payload = $this->redirect_payload_from_url( $result['redirect_url'] );
+		$this->assertSame( 'success', $payload['result']['type'] );
+		$this->assertSame( 'Thanks!', $payload['result']['message'] );
 
 		$this->assertCount( 1, $this->requests );
 		$this->assertSame( 'https://newsletter.example.test/api/subscribers', $this->requests[0]['url'] );
@@ -429,13 +1180,13 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 				'base_url'        => 'https://newsletter.example.test',
 				'api_token'       => 'api:token',
 				'list_ids'        => '3',
-				'success_message' => 'Danke!',
-				'error_message'   => 'Fehler!',
+				'success_message' => 'Thanks!',
+				'error_message'   => 'Error!',
 				'debug_logging'   => '1',
 			]
 		);
 
-		$_POST = [
+		$input = [
 			'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
 			'listmonk_submission_token' => $this->call_private( 'create_submission_token' ),
 			'return_to' => home_url( '/newsletter/' ),
@@ -448,19 +1199,22 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 
 		$this->mock_http_response( [ 'response' => [ 'code' => 200 ], 'body' => '{}' ] );
 
-		try {
-			$this->plugin->handle_submission();
-			$this->fail( 'Expected redirect termination.' );
-		} catch ( RuntimeException $exception ) {
-			$logs       = get_option( 'listmonk_signup_logs' );
-			$request_id = $logs[0]['context']['request_id'];
+		$this->process_submission_payload( $input );
+		$logs         = get_option( 'listmonk_signup_logs' );
+		$request_logs = array_values(
+			array_filter(
+				$logs,
+				static fn ( array $log ): bool => isset( $log['context']['request_id'] )
+			)
+		);
+		$request_id = $request_logs[0]['context']['request_id'];
 
-			$this->assertNotSame( '', $request_id );
-			$this->assertSame( 'Submitting subscriber API request.', $logs[0]['message'] );
-			$this->assertSame( 'Subscriber API response.', $logs[1]['message'] );
-			foreach ( $logs as $log ) {
-				$this->assertSame( $request_id, $log['context']['request_id'] );
-			}
+		$this->assertNotSame( '', $request_id );
+		$this->assertSame( 'Frontend signup submission received via rest_json.', $logs[0]['message'] );
+		$this->assertSame( 'Submitting subscriber API request.', $request_logs[0]['message'] );
+		$this->assertSame( 'Subscriber API response.', $request_logs[1]['message'] );
+		foreach ( $request_logs as $log ) {
+			$this->assertSame( $request_id, $log['context']['request_id'] );
 		}
 	}
 
@@ -474,47 +1228,42 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertFalse( $this->call_private( 'consume_submission_token' ) );
 	}
 
-	public function test_invalid_submission_token_redirects_with_retry_error_without_http(): void {
-		$_POST = [
+	public function test_invalid_submission_token_returns_retry_error_without_http_or_result_transient(): void {
+		$result = $this->process_submission_payload(
+		[
 			'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
 			'return_to' => home_url( '/newsletter/' ),
 			'email' => 'ada@example.test',
 			'consent' => '1',
 			'vorname' => 'Ada',
-		];
+		]
+		);
 
-		try {
-			$this->plugin->handle_submission();
-			$this->fail( 'Expected redirect termination.' );
-		} catch ( RuntimeException $exception ) {
-			$payload = $this->redirect_payload();
-			$this->assertSame( [], $this->requests );
-			$this->assertSame( 'error', $payload['result']['type'] );
-			$this->assertSame( 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal.', $payload['result']['message'] );
-			$this->assertSame( 'ada@example.test', $payload['values']['email'] );
-			$this->assertSame( 'Ada', $payload['values']['vorname'] );
-		}
+		$this->assertSame( [], $this->requests );
+		$this->assertSame( 'error', $result['result']['type'] );
+		$this->assertSame( 'invalid_submission_token', $result['result']['code'] );
+		$this->assertSame( 'Your session has expired. Please reload the page and try again.', $result['result']['message'] );
+		$this->assertSame( 'ada@example.test', $result['values']['email'] );
+		$this->assertSame( 'Ada', $result['values']['vorname'] );
+		$this->assertNoSubmissionResultToken( $result['redirect_url'] );
 	}
 
 	public function test_honeypot_short_circuits_as_success_without_http_or_token(): void {
-		update_option( 'listmonk_signup_settings', [ 'success_message' => 'Danke!' ] );
-		$_POST = [
+		update_option( 'listmonk_signup_settings', [ 'success_message' => 'Thanks!' ] );
+		$result = $this->process_submission_payload(
+		[
 			'listmonk_signup_nonce' => wp_create_nonce( 'listmonk_signup_submit' ),
 			'return_to' => home_url( '/newsletter/' ),
 			'email' => 'ada@example.test',
 			'consent' => '1',
 			'website' => 'bot',
-		];
+		]
+		);
 
-		try {
-			$this->plugin->handle_submission();
-			$this->fail( 'Expected redirect termination.' );
-		} catch ( RuntimeException $exception ) {
-			$payload = $this->redirect_payload();
-			$this->assertSame( [], $this->requests );
-			$this->assertSame( 'success', $payload['result']['type'] );
-			$this->assertSame( 'Danke!', $payload['result']['message'] );
-		}
+		$this->assertSame( [], $this->requests );
+		$this->assertSame( 'success', $result['result']['type'] );
+		$this->assertSame( 'Thanks!', $result['result']['message'] );
+		$this->assertNoSubmissionResultToken( $result['redirect_url'] );
 	}
 
 	public function test_debug_logs_caps_and_clear_logs(): void {
@@ -551,6 +1300,23 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		}
 	}
 
+	public function test_settings_page_shows_api_failures_with_clear_button_without_debug_logs(): void {
+		$this->call_private( 'record_api_failure', [ 'Failure', [ 'http_code' => 500, 'email' => 'ada@example.test' ] ] );
+
+		$user_id = self::factory()->user->create( [ 'role' => 'administrator' ] );
+		wp_set_current_user( $user_id );
+
+		ob_start();
+		$this->plugin->render_settings_page();
+		$html = (string) ob_get_clean();
+
+		$this->assertStringContainsString( 'API notices', $html );
+		$this->assertStringContainsString( 'Failure', $html );
+		$this->assertStringContainsString( 'Clear logs', $html );
+		$this->assertStringContainsString( 'name="listmonk_clear_logs"', $html );
+		$this->assertStringNotContainsString( 'ada@example.test', $html );
+	}
+
 	private function call_private( string $method, array $args = [] ) {
 		$reflection = new ReflectionMethod( $this->plugin, $method );
 
@@ -558,10 +1324,18 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 	}
 
 	private function mock_http_response( $response ): void {
+		$this->mock_http_responses( [ $response ] );
+	}
+
+	private function mock_http_responses( array $responses ): void {
 		add_filter(
 			'pre_http_request',
-			function ( $preempt, array $args, string $url ) use ( $response ) {
+			function ( $preempt, array $args, string $url ) use ( $responses ) {
+				static $index = 0;
 				$this->requests[] = [ 'args' => $args, 'url' => $url ];
+
+				$response = $responses[ min( $index, count( $responses ) - 1 ) ];
+				$index++;
 
 				return $response;
 			},
@@ -570,8 +1344,24 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		);
 	}
 
+	private function process_submission_payload( array $payload ): array {
+		return $this->call_private( 'process_submission', [ $payload, 'rest_json' ] );
+	}
+
+	private function rest_request( array $payload ): WP_REST_Request {
+		$request = new WP_REST_Request( 'POST', '/listmonk-signup/v1/submit' );
+		$request->set_header( 'Content-Type', 'application/json' );
+		$request->set_body( wp_json_encode( $payload ) );
+
+		return $request;
+	}
+
 	private function redirect_payload(): array {
-		$parts = wp_parse_url( $this->last_redirect );
+		return $this->redirect_payload_from_url( $this->last_redirect );
+	}
+
+	private function redirect_payload_from_url( string $url ): array {
+		$parts = wp_parse_url( $url );
 		$this->assertIsArray( $parts );
 		parse_str( $parts['query'] ?? '', $query );
 		$this->assertArrayHasKey( 'listmonk_signup_result', $query );
@@ -579,5 +1369,12 @@ final class Listmonk_Signup_Test extends WP_UnitTestCase {
 		$this->assertIsArray( $payload );
 
 		return $payload;
+	}
+
+	private function assertNoSubmissionResultToken( string $url ): void {
+		$parts = wp_parse_url( $url );
+		$this->assertIsArray( $parts );
+		parse_str( $parts['query'] ?? '', $query );
+		$this->assertArrayNotHasKey( 'listmonk_signup_result', $query );
 	}
 }

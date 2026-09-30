@@ -28,24 +28,24 @@ Place this shortcode on the newsletter page:
 [listmonk_signup]
 ```
 
-The form works without JavaScript and posts back to WordPress with nonce protection, a honeypot field, and transient-based rate limiting. Email is shown first, followed by optional personalization fields and an optional styled selector for all 23 Vienna districts.
+The form submits JSON to the public WordPress REST route `/wp-json/listmonk-signup/v1/submit` with nonce protection, a one-time submission token, a honeypot field, and transient-based rate limiting. Email is shown first, followed by optional personalization fields and an optional styled selector for all 23 Vienna districts.
 
 ## Listmonk Behavior
 
 The signup uses authenticated `POST /api/subscribers` with `email`, optional `name`, `status: "enabled"`, numeric `lists`, and `attribs` for `anrede`, `vorname`, `nachname`, and `bezirke`. `bezirke` is stored as an array of Vienna postal-code strings, for example `["1020", "1070"]`. The plugin does not send `preconfirm_subscriptions`, so Listmonk list settings control double opt-in behavior.
 
-The plugin does not use the public subscription endpoint and does not perform a separate subscriber lookup or attribute PATCH. Existing subscribers are sent through the same subscriber API request so Listmonk can update attributes and list membership according to its API behavior.
+The plugin does not use the public subscription endpoint and does not perform a separate attribute PATCH. New subscribers are created through the subscriber API request. If Listmonk returns a `409` because the subscriber already exists, the plugin looks up the existing subscriber by email, verifies current list membership, adds any missing lists with the correct confirmed or unconfirmed status based on each list's opt-in setting, and sends an opt-in request when a double opt-in list needs confirmation.
 
-The salutation field shows `Liebe` as a placeholder, not as a prefilled value. If a visitor provides a first or last name but leaves salutation empty, the plugin stores `Liebe`; if they ignore the personalization fields entirely, salutation stays empty.
+The salutation field shows the translated value for `Dear` as a placeholder, not as a prefilled value. If a visitor provides a first or last name but leaves salutation empty, the plugin stores the translated value for `Dear`; if they ignore the personalization fields entirely, salutation stays empty.
 
 ## Debug Logging
 
-For testing, enable **Temporäres Debug Logging** in **Settings > Listmonk Signup**. After submitting the form, recent Listmonk subscriber API request and response logs appear on the same settings page. Disable logging again after testing and clear the logs.
+For testing, enable **Temporary debug logging** in **Settings > Listmonk Signup**. After submitting the form, recent Listmonk subscriber API request and response logs appear on the same settings page. Disable logging again after testing and clear the logs.
 
 ## Test Checklist
 
-- Submit with an empty email and confirm the German validation message appears.
-- Submit without consent and confirm the German validation message appears.
+- Submit with an empty email and confirm the translated validation message appears.
+- Submit without consent and confirm the translated validation message appears.
 - Submit with a valid email and consent and confirm Listmonk receives the subscriber API request.
 - Select one or more Bezirke and confirm `bezirke` is stored in Listmonk.
 - For a double opt-in list, confirm Listmonk sends the opt-in email instead of directly confirming the subscriber.
@@ -55,15 +55,14 @@ For testing, enable **Temporäres Debug Logging** in **Settings > Listmonk Signu
 
 ## Automated Tests
 
-From `wordpress/`, install PHP test dependencies and the WordPress test suite:
+From `wordpress/`, install PHP test dependencies and run the WordPress test suite:
 
 ```bash
 composer install
-tests/bin/install-wp-tests.sh wordpress_test root '' localhost latest
 composer test
 ```
 
-If the WordPress test suite is already installed elsewhere, set `WP_TESTS_DIR` before running `composer test`.
+`composer test` installs the WordPress test suite into `/tmp/wordpress-tests-lib` by default when it is missing. Override the defaults with `WP_TESTS_DIR`, `WP_CORE_DIR`, `WP_TESTS_DB_NAME`, `WP_TESTS_DB_USER`, `WP_TESTS_DB_PASS`, and `WP_TESTS_DB_HOST` as needed.
 
 The local test command requires a reachable MySQL/MariaDB server and creates/uses the configured test database. CI runs the same PHPUnit suite against a disposable MySQL service.
 

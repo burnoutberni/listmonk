@@ -3,7 +3,7 @@
  * Plugin Name: Listmonk Signup
  * Plugin URI: https://github.com/burnoutberni/listmonk
  * Description: Adds a configurable Listmonk newsletter signup shortcode for WordPress.
- * Version: 1.0.0
+ * Version: 1.1.2
  * Requires at least: 6.4
  * Requires PHP: 8.1
  * Author: Bernhard Hayden
@@ -21,7 +21,6 @@ final class Listmonk_Signup {
 	private const OPTION_NAME = 'listmonk_signup_settings';
 	private const LOG_OPTION_NAME = 'listmonk_signup_logs';
 	private const API_FAILURE_OPTION_NAME = 'listmonk_signup_api_failures';
-	private const SUBMISSION_ACTION = 'listmonk_signup';
 	private const NONCE_ACTION = 'listmonk_signup_submit';
 	private const NONCE_NAME = 'listmonk_signup_nonce';
 	private const SUBMISSION_TOKEN_NAME = 'listmonk_submission_token';
@@ -49,17 +48,24 @@ final class Listmonk_Signup {
 	}
 
 	private function __construct() {
+		add_action( 'init', [ $this, 'load_textdomain' ] );
 		add_action( 'admin_menu', [ $this, 'add_settings_page' ] );
 		add_action( 'admin_init', [ $this, 'register_settings' ] );
 		add_action( 'admin_init', [ $this, 'handle_clear_logs' ] );
-		add_action( 'admin_post_nopriv_' . self::SUBMISSION_ACTION, [ $this, 'handle_submission' ] );
-		add_action( 'admin_post_' . self::SUBMISSION_ACTION, [ $this, 'handle_submission' ] );
+		add_action( 'rest_api_init', [ $this, 'register_rest_routes' ] );
 		add_shortcode( 'listmonk_signup', [ $this, 'render_shortcode' ] );
+	}
+
+	public function load_textdomain(): void {
+		load_plugin_textdomain( 'listmonk-signup', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 	}
 
 	public static function activate(): void {
 		if ( false === get_option( self::OPTION_NAME, false ) ) {
-			add_option( self::OPTION_NAME, self::defaults() );
+			$defaults = self::defaults();
+			unset( $defaults['success_message'], $defaults['error_message'], $defaults['consent_text'] );
+
+			add_option( self::OPTION_NAME, $defaults );
 		}
 	}
 
@@ -68,9 +74,9 @@ final class Listmonk_Signup {
 			'base_url'        => 'https://newsletter.example.com',
 			'api_token'       => '',
 			'list_ids'        => '3',
-			'success_message' => 'Vielen Dank! Bitte prüfe dein E-Mail-Postfach und bestätige deine Anmeldung.',
-			'error_message'   => 'Die Anmeldung konnte leider nicht abgeschlossen werden. Bitte versuche es später erneut.',
-			'consent_text'    => 'Ich möchte den Newsletter abonnieren und akzeptiere, dass meine Angaben zur Zusendung des Newsletters verarbeitet werden. Hinweise findest du in der Datenschutzerklärung. Ich kann mich jederzeit wieder abmelden.',
+			'success_message' => __( 'Thank you! Please check your email inbox and confirm your subscription.', 'listmonk-signup' ),
+			'error_message'   => __( 'The subscription could not be completed. Please try again later.', 'listmonk-signup' ),
+			'consent_text'    => __( 'I want to subscribe to the newsletter and accept that my information will be processed to send the newsletter. You can find details in the privacy policy. I can unsubscribe at any time.', 'listmonk-signup' ),
 			'debug_logging'   => '0',
 		];
 	}
@@ -91,7 +97,7 @@ final class Listmonk_Signup {
 			'1120' => '12., Meidling',
 			'1130' => '13., Hietzing',
 			'1140' => '14., Penzing',
-			'1150' => '15., RH5H',
+			'1150' => '15., Rudolfsheim-Fünfhaus',
 			'1160' => '16., Ottakring',
 			'1170' => '17., Hernals',
 			'1180' => '18., Währing',
@@ -111,8 +117,8 @@ final class Listmonk_Signup {
 
 	public function add_settings_page(): void {
 		add_options_page(
-			'Listmonk Signup',
-			'Listmonk Signup',
+			__( 'Listmonk Signup', 'listmonk-signup' ),
+			__( 'Listmonk Signup', 'listmonk-signup' ),
 			'manage_options',
 			'listmonk-signup',
 			[ $this, 'render_settings_page' ]
@@ -142,7 +148,7 @@ final class Listmonk_Signup {
 			add_settings_error(
 				self::OPTION_NAME,
 				'listmonk_base_url_https',
-				'Listmonk base URL must start with https://.',
+				__( 'Listmonk base URL must start with https://.', 'listmonk-signup' ),
 				'error'
 			);
 			$base_url = ! empty( $previous['base_url'] ) && 'https' === wp_parse_url( $previous['base_url'], PHP_URL_SCHEME ) ? $previous['base_url'] : $defaults['base_url'];
@@ -156,14 +162,14 @@ final class Listmonk_Signup {
 			add_settings_error(
 				self::OPTION_NAME,
 				'listmonk_api_token_required',
-				'Listmonk API credential is required and must use api_user:token format.',
+				__( 'Listmonk API credential is required and must use api_user:token format.', 'listmonk-signup' ),
 				'error'
 			);
 		} elseif ( ! $this->api_token_has_valid_format( $api_token ) ) {
 			add_settings_error(
 				self::OPTION_NAME,
 				'listmonk_api_token_format',
-				'Listmonk API credential must use api_user:token format.',
+				__( 'Listmonk API credential must use api_user:token format.', 'listmonk-signup' ),
 				'error'
 			);
 			$api_token = ! empty( $previous['api_token'] ) && $this->api_token_has_valid_format( $previous['api_token'] ) ? $previous['api_token'] : '';
@@ -175,7 +181,7 @@ final class Listmonk_Signup {
 			add_settings_error(
 				self::OPTION_NAME,
 				'listmonk_list_ids_required',
-				'At least one numeric Listmonk list ID is required.',
+				__( 'At least one numeric Listmonk list ID is required.', 'listmonk-signup' ),
 				'error'
 			);
 			$list_ids = ! empty( $previous['list_ids'] ) ? implode( "\n", $this->parse_list_ids( $previous['list_ids'] ) ) : '';
@@ -216,81 +222,82 @@ final class Listmonk_Signup {
 		$settings = $this->settings();
 		$logs     = $this->logs();
 		$failures = $this->api_failures();
+		$has_logs = ! empty( $logs ) || ! empty( $failures );
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 			<?php if ( ! empty( $_GET['listmonk_logs_cleared'] ) ) : ?>
-				<div class="notice notice-success is-dismissible"><p>Listmonk Signup Logs und API-Hinweise wurden gelöscht.</p></div>
+				<div class="notice notice-success is-dismissible"><p><?php echo esc_html__( 'Listmonk Signup logs and API notices were deleted.', 'listmonk-signup' ); ?></p></div>
 			<?php endif; ?>
 			<?php if ( ! empty( $failures ) ) : ?>
 				<div class="notice notice-warning">
-					<p><strong>Listmonk Signup:</strong> Mindestens eine Listmonk API-Anfrage konnte nicht abgeschlossen werden.</p>
+					<p><strong>Listmonk Signup:</strong> <?php echo esc_html__( 'At least one Listmonk API request could not be completed.', 'listmonk-signup' ); ?></p>
 					<ul>
 						<?php foreach ( array_reverse( $failures ) as $failure ) : ?>
 							<li><?php echo esc_html( $failure['time'] ?? '' ); ?>: <?php echo esc_html( $failure['message'] ?? '' ); ?> <code><?php echo esc_html( wp_json_encode( $failure['context'] ?? [] ) ); ?></code></li>
 						<?php endforeach; ?>
 					</ul>
-					<p>Bitte Listmonk API-Zugang und Logs prüfen. Die Hinweise werden mit „Logs löschen“ entfernt.</p>
+					<p><?php echo esc_html__( 'Please check the Listmonk API credentials and logs. The notices are removed with "Clear logs".', 'listmonk-signup' ); ?></p>
 				</div>
 			<?php endif; ?>
 			<form method="post" action="options.php">
 				<?php settings_fields( 'listmonk_signup' ); ?>
 				<table class="form-table" role="presentation">
 					<tr>
-						<th scope="row"><label for="listmonk-base-url">Listmonk Base URL</label></th>
+						<th scope="row"><label for="listmonk-base-url"><?php echo esc_html__( 'Listmonk Base URL', 'listmonk-signup' ); ?></label></th>
 						<td><input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[base_url]" id="listmonk-base-url" type="url" class="regular-text" value="<?php echo esc_attr( $settings['base_url'] ); ?>" required></td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="listmonk-api-token">Listmonk API User + Token</label></th>
+						<th scope="row"><label for="listmonk-api-token"><?php echo esc_html__( 'Listmonk API User + Token', 'listmonk-signup' ); ?></label></th>
 						<td>
-							<input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[api_token]" id="listmonk-api-token" type="password" class="regular-text" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( empty( $settings['api_token'] ) ? 'api_user:token' : 'Gespeichert - leer lassen, um beizubehalten' ); ?>">
-							<p class="description">Erforderlich. Listmonk erwartet <code>api_user:token</code>, z. B. <code>newsletter_api:abc123...</code>. Die Anmeldung verwendet die authentifizierte Subscriber API, damit Attribute direkt gespeichert werden.</p>
+							<input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[api_token]" id="listmonk-api-token" type="password" class="regular-text" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( empty( $settings['api_token'] ) ? 'api_user:token' : __( 'Saved - leave empty to keep', 'listmonk-signup' ) ); ?>">
+							<p class="description"><?php echo wp_kses( __( 'Required. Listmonk expects <code>api_user:token</code>, for example <code>newsletter_api:abc123...</code>. The signup uses the authenticated subscriber API so attributes are saved directly.', 'listmonk-signup' ), [ 'code' => [] ] ); ?></p>
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="listmonk-list-ids">Listen-IDs</label></th>
+						<th scope="row"><label for="listmonk-list-ids"><?php echo esc_html__( 'List IDs', 'listmonk-signup' ); ?></label></th>
 						<td>
 							<textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[list_ids]" id="listmonk-list-ids" class="large-text code" rows="4" required><?php echo esc_textarea( $settings['list_ids'] ); ?></textarea>
-							<p class="description">Eine numerische Listen-ID pro Zeile oder kommagetrennt. Standard: 3.</p>
+							<p class="description"><?php echo esc_html__( 'One numeric list ID per line or comma-separated. Default: 3.', 'listmonk-signup' ); ?></p>
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="listmonk-success-message">Erfolgsmeldung</label></th>
+						<th scope="row"><label for="listmonk-success-message"><?php echo esc_html__( 'Success message', 'listmonk-signup' ); ?></label></th>
 						<td><input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[success_message]" id="listmonk-success-message" type="text" class="large-text" value="<?php echo esc_attr( $settings['success_message'] ); ?>"></td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="listmonk-error-message">Fehlermeldung</label></th>
+						<th scope="row"><label for="listmonk-error-message"><?php echo esc_html__( 'Error message', 'listmonk-signup' ); ?></label></th>
 						<td><input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[error_message]" id="listmonk-error-message" type="text" class="large-text" value="<?php echo esc_attr( $settings['error_message'] ); ?>"></td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="listmonk-consent-text">Consent-Text</label></th>
+						<th scope="row"><label for="listmonk-consent-text"><?php echo esc_html__( 'Consent text', 'listmonk-signup' ); ?></label></th>
 						<td>
 							<textarea name="<?php echo esc_attr( self::OPTION_NAME ); ?>[consent_text]" id="listmonk-consent-text" class="large-text" rows="5"><?php echo esc_textarea( $settings['consent_text'] ); ?></textarea>
-							<p class="description">Sicheres HTML wie Links ist erlaubt.</p>
+							<p class="description"><?php echo esc_html__( 'Safe HTML such as links is allowed.', 'listmonk-signup' ); ?></p>
 						</td>
 					</tr>
 					<tr>
-						<th scope="row">Temporäres Debug Logging</th>
+						<th scope="row"><?php echo esc_html__( 'Temporary debug logging', 'listmonk-signup' ); ?></th>
 						<td>
-							<label><input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[debug_logging]" type="checkbox" value="1" <?php checked( $settings['debug_logging'], '1' ); ?>> Listmonk API Debug Logs speichern</label>
-							<p class="description">Nur kurz zum Testen aktivieren. Es werden keine API Tokens gespeichert, aber technische API-Antworten und E-Mail-Adressen können in gekürzter Form sichtbar sein.</p>
+							<label><input name="<?php echo esc_attr( self::OPTION_NAME ); ?>[debug_logging]" type="checkbox" value="1" <?php checked( $settings['debug_logging'], '1' ); ?>> <?php echo esc_html__( 'Store Listmonk API debug logs', 'listmonk-signup' ); ?></label>
+							<p class="description"><?php echo esc_html__( 'Enable only briefly for testing. No API tokens are stored, but technical API responses and shortened email addresses can be visible.', 'listmonk-signup' ); ?></p>
 						</td>
 					</tr>
 				</table>
 				<?php submit_button(); ?>
 			</form>
 
-			<h2>Debug Logs</h2>
-			<p>Die letzten <?php echo esc_html( (string) self::MAX_LOG_ENTRIES ); ?> Einträge aus dem temporären Plugin-Logging.</p>
+			<h2><?php echo esc_html__( 'Debug logs', 'listmonk-signup' ); ?></h2>
+			<p><?php printf( esc_html__( 'The latest %s entries from the temporary plugin logging.', 'listmonk-signup' ), esc_html( (string) self::MAX_LOG_ENTRIES ) ); ?></p>
 			<?php if ( empty( $logs ) ) : ?>
-				<p><em>Keine Logs vorhanden.</em></p>
+				<p><em><?php echo esc_html__( 'No logs available.', 'listmonk-signup' ); ?></em></p>
 			<?php else : ?>
 				<table class="widefat striped">
 					<thead>
 						<tr>
-							<th>Zeit</th>
-							<th>Nachricht</th>
-							<th>Kontext</th>
+							<th><?php echo esc_html__( 'Time', 'listmonk-signup' ); ?></th>
+							<th><?php echo esc_html__( 'Message', 'listmonk-signup' ); ?></th>
+							<th><?php echo esc_html__( 'Context', 'listmonk-signup' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -303,58 +310,149 @@ final class Listmonk_Signup {
 						<?php endforeach; ?>
 					</tbody>
 				</table>
+			<?php endif; ?>
+
+			<h2><?php echo esc_html__( 'API notices', 'listmonk-signup' ); ?></h2>
+			<p><?php printf( esc_html__( 'The latest %s Listmonk API notices, even when temporary debug logging is disabled.', 'listmonk-signup' ), esc_html( (string) self::MAX_API_FAILURES ) ); ?></p>
+			<?php if ( empty( $failures ) ) : ?>
+				<p><em><?php echo esc_html__( 'No API notices available.', 'listmonk-signup' ); ?></em></p>
+			<?php else : ?>
+				<table class="widefat striped">
+					<thead>
+						<tr>
+							<th><?php echo esc_html__( 'Time', 'listmonk-signup' ); ?></th>
+							<th><?php echo esc_html__( 'Message', 'listmonk-signup' ); ?></th>
+							<th><?php echo esc_html__( 'Context', 'listmonk-signup' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( array_reverse( $failures ) as $failure ) : ?>
+							<tr>
+								<td><?php echo esc_html( $failure['time'] ?? '' ); ?></td>
+								<td><?php echo esc_html( $failure['message'] ?? '' ); ?></td>
+								<td><code><?php echo esc_html( wp_json_encode( $failure['context'] ?? [] ) ); ?></code></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
+
+			<?php if ( $has_logs ) : ?>
 				<form method="post" action="<?php echo esc_url( admin_url( 'options-general.php?page=listmonk-signup' ) ); ?>" style="margin-top:1rem;">
 					<?php wp_nonce_field( self::CLEAR_LOGS_ACTION ); ?>
-					<button class="button" type="submit" name="listmonk_clear_logs" value="1">Logs löschen</button>
+					<button class="button" type="submit" name="listmonk_clear_logs" value="1"><?php echo esc_html__( 'Clear logs', 'listmonk-signup' ); ?></button>
 				</form>
 			<?php endif; ?>
 		</div>
 		<?php
 	}
 
-	public function handle_submission(): void {
-		$redirect_url = $this->submission_redirect_url();
-		$values       = $this->sanitize_frontend_values( wp_unslash( $_POST ) );
+	public function register_rest_routes(): void {
+		register_rest_route(
+			'listmonk-signup/v1',
+			'/submit',
+			[
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'handle_rest_submission' ],
+				'permission_callback' => '__return_true',
+			]
+		);
+	}
 
-		if ( ! isset( $_POST[ self::NONCE_NAME ] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST[ self::NONCE_NAME ] ) ), self::NONCE_ACTION ) ) {
-			$this->redirect_with_result( $redirect_url, $this->error_result( 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal.' ), $values );
+	public function handle_rest_submission( WP_REST_Request $request ): WP_REST_Response {
+		nocache_headers();
+
+		$payload = $request->get_json_params();
+		if ( ! is_array( $payload ) ) {
+			$payload = [];
 		}
 
-		if ( ! empty( $_POST['website'] ) ) {
-			$this->redirect_with_result( $redirect_url, $this->success_result() );
+		$result          = $this->process_submission( $payload, 'rest_json' );
+		$submission_type = $result['result']['type'] ?? 'error';
+		$response        = rest_ensure_response(
+			[
+				'redirect_url' => $result['redirect_url'],
+				'result'       => $submission_type,
+				'message'      => $result['result']['message'] ?? '',
+				'error_code'   => 'error' === $submission_type ? ( $result['result']['code'] ?? 'submission_failed' ) : null,
+			]
+		);
+		$response->set_status( $result['result']['status'] ?? 200 );
+		$response->header( 'Cache-Control', 'no-cache, must-revalidate, max-age=0' );
+
+		return $response;
+	}
+
+	private function process_submission( array $raw_input, string $source ): array {
+		$redirect_url = $this->submission_redirect_url( $raw_input );
+		$values       = $this->sanitize_frontend_values( $raw_input );
+
+		$this->debug_log(
+			'Frontend signup submission received via ' . $source . '.',
+			[
+				'source'       => $source,
+				'redirect_url' => $redirect_url,
+				'has_email'    => '' !== $values['email'],
+				'has_consent'  => $values['consent'],
+			]
+		);
+
+		if ( ! isset( $raw_input[ self::NONCE_NAME ] ) || ! wp_verify_nonce( sanitize_text_field( (string) $raw_input[ self::NONCE_NAME ] ), self::NONCE_ACTION ) ) {
+			$this->debug_log( 'Frontend signup rejected: invalid nonce.', [ 'source' => $source, 'redirect_url' => $redirect_url ] );
+			return $this->submission_result_payload_without_storage( $redirect_url, $this->error_result( __( 'Your session has expired. Please reload the page and try again.', 'listmonk-signup' ), 'invalid_nonce', 403 ), $values );
 		}
 
-		if ( ! $this->consume_submission_token() ) {
-			$this->redirect_with_result( $redirect_url, $this->error_result( 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es noch einmal.' ), $values );
+		if ( ! empty( $raw_input['website'] ) ) {
+			$this->debug_log( 'Frontend signup accepted as honeypot submission.', [ 'source' => $source, 'redirect_url' => $redirect_url ] );
+			return $this->submission_result_payload_without_storage( $redirect_url, $this->success_result() );
+		}
+
+		if ( ! $this->consume_submission_token( $raw_input ) ) {
+			$this->debug_log( 'Frontend signup rejected: invalid submission token.', [ 'source' => $source, 'redirect_url' => $redirect_url ] );
+			return $this->submission_result_payload_without_storage( $redirect_url, $this->error_result( __( 'Your session has expired. Please reload the page and try again.', 'listmonk-signup' ), 'invalid_submission_token', 403 ), $values );
 		}
 
 		if ( empty( $values['email'] ) || ! is_email( $values['email'] ) ) {
-			$this->redirect_with_result( $redirect_url, $this->error_result( 'Bitte gib eine gültige E-Mail-Adresse ein.' ), $values );
+			$this->debug_log( 'Frontend signup rejected: invalid email.', [ 'source' => $source, 'redirect_url' => $redirect_url ] );
+			return $this->submission_result_payload( $redirect_url, $this->error_result( __( 'Please enter a valid email address.', 'listmonk-signup' ), 'invalid_email', 400 ), $values );
 		}
 
 		if ( empty( $values['consent'] ) ) {
-			$this->redirect_with_result( $redirect_url, $this->error_result( 'Bitte bestätige, dass du den Newsletter abonnieren möchtest.' ), $values );
+			$this->debug_log( 'Frontend signup rejected: missing consent.', [ 'source' => $source, 'redirect_url' => $redirect_url ] );
+			return $this->submission_result_payload( $redirect_url, $this->error_result( __( 'Please confirm that you want to subscribe to the newsletter.', 'listmonk-signup' ), 'missing_consent', 400 ), $values );
 		}
 
 		if ( $this->is_rate_limited( $values['email'] ) ) {
-			$this->redirect_with_result( $redirect_url, $this->error_result( 'Bitte warte kurz, bevor du es noch einmal versuchst.' ), $values );
+			$this->debug_log( 'Frontend signup rejected: rate limited.', [ 'source' => $source, 'redirect_url' => $redirect_url ] );
+			return $this->submission_result_payload( $redirect_url, $this->error_result( __( 'Please wait a moment before trying again.', 'listmonk-signup' ), 'rate_limited', 429 ), $values );
 		}
 
 		$settings = $this->settings();
 		$list_ids = $this->parse_list_ids( $settings['list_ids'] );
 
 		if ( empty( $settings['base_url'] ) || empty( $settings['api_token'] ) || ! $this->api_token_has_valid_format( $settings['api_token'] ) || empty( $list_ids ) ) {
-			$this->redirect_with_result( $redirect_url, $this->error_result( $settings['error_message'] ), $values );
+			$this->debug_log(
+				'Frontend signup rejected: invalid plugin configuration.',
+				[
+					'source'          => $source,
+					'redirect_url'    => $redirect_url,
+					'has_base_url'    => ! empty( $settings['base_url'] ),
+					'has_api_token'   => ! empty( $settings['api_token'] ),
+					'valid_api_token' => ! empty( $settings['api_token'] ) && $this->api_token_has_valid_format( $settings['api_token'] ),
+					'list_count'      => count( $list_ids ),
+				]
+			);
+			return $this->submission_result_payload( $redirect_url, $this->error_result( $settings['error_message'], 'configuration_error', 500 ), $values );
 		}
 
 		$request_id = wp_generate_uuid4();
 		$result     = $this->subscribe_via_subscribers_endpoint( $settings, $list_ids, $values, $request_id );
 
 		if ( is_wp_error( $result ) ) {
-			$this->redirect_with_result( $redirect_url, $this->error_result( $settings['error_message'] ), $values );
+			return $this->submission_result_payload( $redirect_url, $this->error_result( $settings['error_message'], 'subscription_failed', 500 ), $values );
 		}
 
-		$this->redirect_with_result( $redirect_url, $this->success_result( $settings['success_message'] ) );
+		return $this->submission_result_payload( $redirect_url, $this->success_result( $settings['success_message'] ) );
 	}
 
 	public function render_shortcode(): string {
@@ -378,7 +476,7 @@ final class Listmonk_Signup {
 
 		ob_start();
 		?>
-		<form class="listmonk-signup" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<form class="listmonk-signup" method="post" data-listmonk-rest-url="<?php echo esc_url( rest_url( 'listmonk-signup/v1/submit' ) ); ?>">
 			<?php if ( ! empty( $submission_result['message'] ) ) : ?>
 				<div class="listmonk-signup__message listmonk-signup__message--<?php echo esc_attr( $submission_result['type'] ); ?>" role="status">
 					<?php echo esc_html( $submission_result['message'] ); ?>
@@ -386,37 +484,37 @@ final class Listmonk_Signup {
 			<?php endif; ?>
 
 			<section class="listmonk-signup__step">
-				<h2><span>1</span>E-Mail</h2>
+				<h2><span>1</span><?php echo esc_html__( 'Email', 'listmonk-signup' ); ?></h2>
 				<p class="listmonk-signup__field">
-					<label for="listmonk-email">E-Mail-Adresse *</label>
+					<label for="listmonk-email"><?php echo esc_html__( 'Email address *', 'listmonk-signup' ); ?></label>
 					<input id="listmonk-email" name="email" type="email" value="<?php echo esc_attr( $values['email'] ); ?>" autocomplete="email" required>
 				</p>
 			</section>
 
 			<section class="listmonk-signup__step listmonk-signup__details">
-				<h2><span>2</span>Optional: Wie sollen wir dich ansprechen?</h2>
+				<h2><span>2</span><?php echo esc_html__( 'Optional: How should we address you?', 'listmonk-signup' ); ?></h2>
 
 				<div class="listmonk-signup__grid">
 					<p class="listmonk-signup__field">
-						<label for="listmonk-anrede">Anrede</label>
-						<input id="listmonk-anrede" name="anrede" type="text" value="<?php echo esc_attr( $values['anrede'] ); ?>" placeholder="Liebe" autocomplete="honorific-prefix">
+						<label for="listmonk-anrede"><?php echo esc_html__( 'Salutation', 'listmonk-signup' ); ?></label>
+						<input id="listmonk-anrede" name="anrede" type="text" value="<?php echo esc_attr( $values['anrede'] ); ?>" placeholder="<?php echo esc_attr__( 'Dear', 'listmonk-signup' ); ?>" autocomplete="honorific-prefix">
 					</p>
 
 					<p class="listmonk-signup__field">
-						<label for="listmonk-vorname">Vorname</label>
+						<label for="listmonk-vorname"><?php echo esc_html__( 'First name', 'listmonk-signup' ); ?></label>
 						<input id="listmonk-vorname" name="vorname" type="text" value="<?php echo esc_attr( $values['vorname'] ); ?>" autocomplete="given-name">
 					</p>
 
 					<p class="listmonk-signup__field">
-						<label for="listmonk-nachname">Nachname</label>
+						<label for="listmonk-nachname"><?php echo esc_html__( 'Last name', 'listmonk-signup' ); ?></label>
 						<input id="listmonk-nachname" name="nachname" type="text" value="<?php echo esc_attr( $values['nachname'] ); ?>" autocomplete="family-name">
 					</p>
 				</div>
 			</section>
 
 			<fieldset class="listmonk-signup__step listmonk-signup__districts">
-				<legend><span>3</span>Optional: Welche Bezirke interessieren dich?</legend>
-				<p class="listmonk-signup__hint">Wenn du einen oder mehrere Bezirke auswählst, stimmst du zu, dass wir deine E-Mail-Adresse verwenden dürfen, um dir in Zukunft Informationen zu lokalen Initiativen in diesen Bezirken zu schicken.</p>
+				<legend><span>3</span><?php echo esc_html__( 'Optional: Which districts are you interested in?', 'listmonk-signup' ); ?></legend>
+				<p class="listmonk-signup__hint"><?php echo esc_html__( 'If you select one or more districts, you agree that we may use your email address to send you information about local initiatives in these districts in the future.', 'listmonk-signup' ); ?></p>
 				<div class="listmonk-signup__district-grid">
 					<?php foreach ( $districts as $district_id => $district_label ) : ?>
 						<label class="listmonk-signup__district">
@@ -428,7 +526,7 @@ final class Listmonk_Signup {
 			</fieldset>
 
 			<section class="listmonk-signup__step">
-				<h2><span>4</span>Zustimmung</h2>
+				<h2><span>4</span><?php echo esc_html__( 'Consent', 'listmonk-signup' ); ?></h2>
 				<p class="listmonk-signup__field listmonk-signup__field--consent">
 					<label>
 						<input name="consent" type="checkbox" value="1" required>
@@ -438,18 +536,17 @@ final class Listmonk_Signup {
 			</section>
 
 			<p class="listmonk-signup__field listmonk-signup__field--hp" aria-hidden="true">
-				<label for="listmonk-website">Website</label>
+				<label for="listmonk-website"><?php echo esc_html__( 'Website', 'listmonk-signup' ); ?></label>
 				<input id="listmonk-website" name="website" type="text" value="" tabindex="-1" autocomplete="off">
 			</p>
 
 			<?php wp_nonce_field( self::NONCE_ACTION, self::NONCE_NAME ); ?>
 			<input type="hidden" name="<?php echo esc_attr( self::SUBMISSION_TOKEN_NAME ); ?>" value="<?php echo esc_attr( $submission_token ); ?>">
-			<input type="hidden" name="action" value="<?php echo esc_attr( self::SUBMISSION_ACTION ); ?>">
 			<input type="hidden" name="return_to" value="<?php echo esc_url( get_permalink() ); ?>">
 			<input type="hidden" name="listmonk_signup_submit" value="1">
 			<section class="listmonk-signup__step listmonk-signup__step--submit">
-				<h2><span>5</span>Jetzt abschicken!</h2>
-				<button type="submit">Newsletter abonnieren</button>
+				<h2><span>5</span><?php echo esc_html__( 'Submit now!', 'listmonk-signup' ); ?></h2>
+				<button type="submit"><?php echo esc_html__( 'Subscribe to newsletter', 'listmonk-signup' ); ?></button>
 			</section>
 		</form>
 		<?php
@@ -462,15 +559,30 @@ final class Listmonk_Signup {
 			'listmonk-signup',
 			plugins_url( 'assets/listmonk-signup.css', __FILE__ ),
 			[],
-			'1.0.0'
+			'1.1.2'
+		);
+		wp_enqueue_script(
+			'listmonk-signup',
+			plugins_url( 'assets/listmonk-signup.js', __FILE__ ),
+			[],
+			'1.1.2',
+			true
+		);
+		wp_localize_script(
+			'listmonk-signup',
+			'listmonkSignup',
+			[
+				'errorMessage' => __( 'The subscription could not be completed. Please try again later.', 'listmonk-signup' ),
+				'restNonce'    => wp_create_nonce( 'wp_rest' ),
+			]
 		);
 	}
 
-	private function submission_redirect_url(): string {
+	private function submission_redirect_url( array $input ): string {
 		$return_to = '';
 
-		if ( isset( $_POST['return_to'] ) ) {
-			$return_to = esc_url_raw( wp_unslash( $_POST['return_to'] ) );
+		if ( isset( $input['return_to'] ) ) {
+			$return_to = esc_url_raw( (string) $input['return_to'] );
 		}
 
 		if ( '' === $return_to ) {
@@ -482,7 +594,26 @@ final class Listmonk_Signup {
 		return remove_query_arg( self::RESULT_QUERY_ARG, $return_to );
 	}
 
-	private function redirect_with_result( string $redirect_url, array $result, array $values = [] ): void {
+	private function submission_result_payload( string $redirect_url, array $result, array $values = [] ): array {
+		$token        = $this->store_submission_result( $result, $values );
+		$redirect_url = add_query_arg( self::RESULT_QUERY_ARG, rawurlencode( $token ), $redirect_url );
+
+		return [
+			'redirect_url' => $redirect_url,
+			'result'       => $result,
+			'values'       => $values,
+		];
+	}
+
+	private function submission_result_payload_without_storage( string $redirect_url, array $result, array $values = [] ): array {
+		return [
+			'redirect_url' => $redirect_url,
+			'result'       => $result,
+			'values'       => $values,
+		];
+	}
+
+	private function store_submission_result( array $result, array $values = [] ): string {
 		$token = wp_generate_uuid4();
 
 		set_transient(
@@ -494,8 +625,7 @@ final class Listmonk_Signup {
 			self::RESULT_TTL_SECONDS
 		);
 
-		wp_safe_redirect( add_query_arg( self::RESULT_QUERY_ARG, rawurlencode( $token ), $redirect_url ) );
-		$this->terminate_request();
+		return $token;
 	}
 
 	private function terminate_request(): void {
@@ -544,12 +674,14 @@ final class Listmonk_Signup {
 		return $token;
 	}
 
-	private function consume_submission_token(): bool {
-		if ( empty( $_POST[ self::SUBMISSION_TOKEN_NAME ] ) ) {
+	private function consume_submission_token( ?array $input = null ): bool {
+		$input = null === $input ? wp_unslash( $_POST ) : $input;
+
+		if ( empty( $input[ self::SUBMISSION_TOKEN_NAME ] ) ) {
 			return false;
 		}
 
-		$token = sanitize_key( wp_unslash( $_POST[ self::SUBMISSION_TOKEN_NAME ] ) );
+		$token = sanitize_key( (string) $input[ self::SUBMISSION_TOKEN_NAME ] );
 		if ( '' === $token ) {
 			return false;
 		}
@@ -636,7 +768,7 @@ final class Listmonk_Signup {
 
 		if ( is_wp_error( $response ) ) {
 			$this->record_api_failure(
-				'Listmonk Subscriber API fehlgeschlagen: ' . $response->get_error_message(),
+				sprintf( __( 'Listmonk Subscriber API failed: %s', 'listmonk-signup' ), $response->get_error_message() ),
 				[
 					'email'      => $values['email'],
 					'request_id' => $request_id,
@@ -656,8 +788,17 @@ final class Listmonk_Signup {
 		);
 
 		if ( $code < 200 || $code >= 300 ) {
+			if ( 409 === $code ) {
+				$recovery = $this->recover_existing_subscriber_signup( $settings, $list_ids, $values, $request_id );
+				if ( true === $recovery ) {
+					return true;
+				}
+
+				return $recovery;
+			}
+
 			$this->record_api_failure(
-				'Listmonk Subscriber API hat einen Fehlerstatus zurückgegeben.',
+				__( 'Listmonk Subscriber API returned an error status.', 'listmonk-signup' ),
 				[
 					'email'      => $values['email'],
 					'http_code'  => $code,
@@ -669,6 +810,408 @@ final class Listmonk_Signup {
 		}
 
 		return true;
+	}
+
+	private function recover_existing_subscriber_signup( array $settings, array $list_ids, array $values, string $request_id = '' ) {
+		$this->debug_log(
+			'Subscriber API reported conflict; verifying existing subscriber state.',
+			[
+				'request_id' => $request_id,
+				'list_count' => count( $list_ids ),
+			]
+		);
+
+		$subscriber = $this->find_listmonk_subscriber_by_email( $settings, $values['email'], $request_id );
+		if ( is_wp_error( $subscriber ) ) {
+			return $subscriber;
+		}
+
+		$subscriber_id = isset( $subscriber['id'] ) ? absint( $subscriber['id'] ) : 0;
+		if ( $subscriber_id < 1 ) {
+			return $this->listmonk_recovery_error(
+				__( 'Listmonk Subscriber API conflict recovery failed: subscriber ID missing.', 'listmonk-signup' ),
+				[
+					'email'      => $values['email'],
+					'request_id' => $request_id,
+				]
+			);
+		}
+
+		$current_list_ids = $this->subscriber_list_ids( $subscriber );
+		$missing_list_ids = array_values( array_diff( $list_ids, $current_list_ids ) );
+		$subscriber_needs_optin = $this->subscriber_needs_optin_for_lists( $subscriber, $list_ids );
+
+		if ( empty( $missing_list_ids ) ) {
+			if ( $subscriber_needs_optin ) {
+				$optin = $this->send_subscriber_optin( $settings, $subscriber_id, $values['email'], $request_id );
+				if ( is_wp_error( $optin ) ) {
+					return $optin;
+				}
+			}
+
+			$this->debug_log(
+				'Existing subscriber already has requested list memberships; treating signup as successful.',
+				[
+					'request_id'    => $request_id,
+					'subscriber_id' => $subscriber_id,
+					'list_count'    => count( $list_ids ),
+				]
+			);
+			return true;
+		}
+
+		$list_optins = $this->list_optins_by_id( $settings, $missing_list_ids, $values['email'], $request_id );
+		if ( is_wp_error( $list_optins ) ) {
+			return $list_optins;
+		}
+
+		$single_optin_list_ids = [];
+		$double_optin_list_ids = [];
+		foreach ( $missing_list_ids as $list_id ) {
+			if ( 'double' === ( $list_optins[ $list_id ] ?? '' ) ) {
+				$double_optin_list_ids[] = $list_id;
+			} else {
+				$single_optin_list_ids[] = $list_id;
+			}
+		}
+
+		if ( ! empty( $single_optin_list_ids ) ) {
+			$added = $this->add_subscriber_to_lists( $settings, $subscriber_id, $single_optin_list_ids, 'confirmed', $values['email'], $request_id );
+			if ( is_wp_error( $added ) ) {
+				return $added;
+			}
+		}
+
+		if ( ! empty( $double_optin_list_ids ) ) {
+			$added = $this->add_subscriber_to_lists( $settings, $subscriber_id, $double_optin_list_ids, 'unconfirmed', $values['email'], $request_id );
+			if ( is_wp_error( $added ) ) {
+				return $added;
+			}
+		}
+
+		if ( $subscriber_needs_optin || ! empty( $double_optin_list_ids ) ) {
+			$optin = $this->send_subscriber_optin( $settings, $subscriber_id, $values['email'], $request_id );
+			if ( is_wp_error( $optin ) ) {
+				return $optin;
+			}
+		}
+
+		return true;
+	}
+
+	private function find_listmonk_subscriber_by_email( array $settings, string $email, string $request_id = '' ) {
+		$page     = 1;
+		$per_page = 100;
+
+		do {
+			$response = wp_remote_request(
+				add_query_arg(
+					[
+						'search'   => $email,
+						'page'     => $page,
+						'per_page' => $per_page,
+					],
+					trailingslashit( $settings['base_url'] ) . 'api/subscribers'
+				),
+				[
+					'method'  => 'GET',
+					'timeout' => 15,
+					'headers' => $this->api_headers( $settings ),
+				]
+			);
+
+			if ( is_wp_error( $response ) ) {
+				$this->record_api_failure(
+					sprintf( __( 'Listmonk Subscriber Lookup API failed: %s', 'listmonk-signup' ), $response->get_error_message() ),
+					[
+						'email'      => $email,
+						'request_id' => $request_id,
+					]
+				);
+				return $response;
+			}
+
+			$code = (int) wp_remote_retrieve_response_code( $response );
+			$this->debug_log(
+				'Subscriber lookup API response.',
+				[
+					'request_id' => $request_id,
+					'http_code'  => $code,
+					'page'       => $page,
+				]
+			);
+
+			if ( $code < 200 || $code >= 300 ) {
+				return $this->listmonk_recovery_error(
+					__( 'Listmonk Subscriber Lookup API returned an error status.', 'listmonk-signup' ),
+					[
+						'email'      => $email,
+						'http_code'  => $code,
+						'request_id' => $request_id,
+						'body'       => $this->debug_body_snippet( wp_remote_retrieve_body( $response ) ),
+					]
+				);
+			}
+
+			$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
+			$results = $decoded['data']['results'] ?? [];
+			if ( ! is_array( $results ) ) {
+				$results = [];
+			}
+
+			foreach ( $results as $subscriber ) {
+				if ( is_array( $subscriber ) && isset( $subscriber['email'] ) && strtolower( (string) $subscriber['email'] ) === strtolower( $email ) ) {
+					return $subscriber;
+				}
+			}
+
+			$total_pages = isset( $decoded['data']['total_pages'] ) ? absint( $decoded['data']['total_pages'] ) : 0;
+			if ( $total_pages > 0 && $page >= $total_pages ) {
+				break;
+			}
+
+			$page++;
+		} while ( count( $results ) >= $per_page );
+
+		return $this->listmonk_recovery_error(
+			__( 'Listmonk Subscriber API conflict recovery failed: exact subscriber not found.', 'listmonk-signup' ),
+			[
+				'email'      => $email,
+				'request_id' => $request_id,
+			]
+		);
+	}
+
+	private function subscriber_list_ids( array $subscriber ): array {
+		$lists = $subscriber['lists'] ?? [];
+		if ( is_string( $lists ) ) {
+			$decoded = json_decode( $lists, true );
+			$lists   = is_array( $decoded ) ? $decoded : [];
+		}
+
+		$list_ids = [];
+		foreach ( is_array( $lists ) ? $lists : [] as $list ) {
+			if ( is_array( $list ) && isset( $list['id'] ) ) {
+				if ( 'unsubscribed' === ( $list['subscription_status'] ?? '' ) ) {
+					continue;
+				}
+
+				$list_ids[] = absint( $list['id'] );
+			} elseif ( is_numeric( $list ) ) {
+				$list_ids[] = absint( $list );
+			}
+		}
+
+		return array_values( array_unique( array_filter( $list_ids ) ) );
+	}
+
+	private function subscriber_needs_optin_for_lists( array $subscriber, array $list_ids ): bool {
+		$lists = $subscriber['lists'] ?? [];
+		if ( is_string( $lists ) ) {
+			$decoded = json_decode( $lists, true );
+			$lists   = is_array( $decoded ) ? $decoded : [];
+		}
+
+		foreach ( is_array( $lists ) ? $lists : [] as $list ) {
+			if ( ! is_array( $list ) || ! isset( $list['id'] ) || ! in_array( absint( $list['id'] ), $list_ids, true ) ) {
+				continue;
+			}
+
+			if ( 'double' === ( $list['optin'] ?? '' ) && 'unconfirmed' === ( $list['subscription_status'] ?? '' ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private function list_optins_by_id( array $settings, array $list_ids, string $email, string $request_id = '' ) {
+		$response = wp_remote_request(
+			add_query_arg(
+				[
+					'per_page' => 'all',
+					'minimal'  => 'true',
+				],
+				trailingslashit( $settings['base_url'] ) . 'api/lists'
+			),
+			[
+				'method'  => 'GET',
+				'timeout' => 15,
+				'headers' => $this->api_headers( $settings ),
+			]
+		);
+
+		if ( is_wp_error( $response ) ) {
+			$this->record_api_failure(
+				sprintf( __( 'Listmonk Lists API failed: %s', 'listmonk-signup' ), $response->get_error_message() ),
+				[
+					'email'      => $email,
+					'request_id' => $request_id,
+				]
+			);
+			return $response;
+		}
+
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		$this->debug_log(
+			'Lists API response.',
+			[
+				'request_id' => $request_id,
+				'http_code'  => $code,
+			]
+		);
+
+		if ( $code < 200 || $code >= 300 ) {
+			return $this->listmonk_recovery_error(
+				__( 'Listmonk Lists API returned an error status.', 'listmonk-signup' ),
+				[
+					'email'      => $email,
+					'http_code'  => $code,
+					'request_id' => $request_id,
+					'body'       => $this->debug_body_snippet( wp_remote_retrieve_body( $response ) ),
+				]
+			);
+		}
+
+		$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
+		$results = $decoded['data']['results'] ?? [];
+		if ( ! is_array( $results ) ) {
+			$results = [];
+		}
+
+		$optins = [];
+		foreach ( $results as $list ) {
+			if ( is_array( $list ) && isset( $list['id'], $list['optin'] ) ) {
+				$optins[ absint( $list['id'] ) ] = (string) $list['optin'];
+			}
+		}
+
+		$missing_optin_ids = array_values( array_diff( $list_ids, array_keys( $optins ) ) );
+		if ( ! empty( $missing_optin_ids ) ) {
+			return $this->listmonk_recovery_error(
+				__( 'Listmonk Subscriber API conflict recovery failed: target list opt-in metadata missing.', 'listmonk-signup' ),
+				[
+					'email'      => $email,
+					'request_id' => $request_id,
+					'list_count' => count( $missing_optin_ids ),
+				]
+			);
+		}
+
+		return $optins;
+	}
+
+	private function add_subscriber_to_lists( array $settings, int $subscriber_id, array $list_ids, string $status, string $email, string $request_id = '' ) {
+		$response = wp_remote_request(
+			trailingslashit( $settings['base_url'] ) . 'api/subscribers/lists',
+			[
+				'method'  => 'PUT',
+				'timeout' => 15,
+				'headers' => $this->api_headers( $settings ),
+				'body'    => wp_json_encode(
+					[
+						'ids'             => [ $subscriber_id ],
+						'action'          => 'add',
+						'target_list_ids' => array_values( $list_ids ),
+						'status'          => $status,
+					]
+				),
+			]
+		);
+
+		if ( is_wp_error( $response ) ) {
+			$this->record_api_failure(
+				sprintf( __( 'Listmonk Subscriber Lists API failed: %s', 'listmonk-signup' ), $response->get_error_message() ),
+				[
+					'email'         => $email,
+					'request_id'    => $request_id,
+					'subscriber_id' => $subscriber_id,
+				]
+			);
+			return $response;
+		}
+
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		$this->debug_log(
+			'Subscriber lists API response.',
+			[
+				'request_id'         => $request_id,
+				'http_code'          => $code,
+				'subscriber_id'      => $subscriber_id,
+				'missing_list_count' => count( $list_ids ),
+				'status'             => $status,
+			]
+		);
+
+		if ( $code < 200 || $code >= 300 ) {
+			return $this->listmonk_recovery_error(
+				__( 'Listmonk Subscriber Lists API returned an error status.', 'listmonk-signup' ),
+				[
+					'email'         => $email,
+					'http_code'     => $code,
+					'request_id'    => $request_id,
+					'subscriber_id' => $subscriber_id,
+					'body'          => $this->debug_body_snippet( wp_remote_retrieve_body( $response ) ),
+				]
+			);
+		}
+
+		return true;
+	}
+
+	private function send_subscriber_optin( array $settings, int $subscriber_id, string $email, string $request_id = '' ) {
+		$response = wp_remote_request(
+			trailingslashit( $settings['base_url'] ) . 'api/subscribers/' . $subscriber_id . '/optin',
+			[
+				'method'  => 'POST',
+				'timeout' => 15,
+				'headers' => $this->api_headers( $settings ),
+				'body'    => '{}',
+			]
+		);
+
+		if ( is_wp_error( $response ) ) {
+			$this->record_api_failure(
+				sprintf( __( 'Listmonk Subscriber Opt-in API failed: %s', 'listmonk-signup' ), $response->get_error_message() ),
+				[
+					'email'         => $email,
+					'request_id'    => $request_id,
+					'subscriber_id' => $subscriber_id,
+				]
+			);
+			return $response;
+		}
+
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		$this->debug_log(
+			'Subscriber opt-in API response.',
+			[
+				'request_id'    => $request_id,
+				'http_code'     => $code,
+				'subscriber_id' => $subscriber_id,
+			]
+		);
+
+		if ( $code < 200 || $code >= 300 ) {
+			return $this->listmonk_recovery_error(
+				__( 'Listmonk Subscriber Opt-in API returned an error status.', 'listmonk-signup' ),
+				[
+					'email'         => $email,
+					'http_code'     => $code,
+					'request_id'    => $request_id,
+					'subscriber_id' => $subscriber_id,
+					'body'          => $this->debug_body_snippet( wp_remote_retrieve_body( $response ) ),
+				]
+			);
+		}
+
+		return true;
+	}
+
+	private function listmonk_recovery_error( string $message, array $context = [] ): WP_Error {
+		$this->record_api_failure( $message, $context );
+
+		return new WP_Error( 'listmonk_subscriber_api_failed', 'Listmonk subscriber API failed.' );
 	}
 
 	private function api_headers( array $settings ): array {
@@ -689,7 +1232,7 @@ final class Listmonk_Signup {
 	private function subscriber_attribs( array $values ): array {
 		$anrede = $values['anrede'];
 		if ( '' === trim( $anrede ) && '' !== $this->build_name( $values ) ) {
-			$anrede = 'Liebe';
+			$anrede = __( 'Dear', 'listmonk-signup' );
 		}
 
 		return [
@@ -885,13 +1428,16 @@ final class Listmonk_Signup {
 		return [
 			'type'    => 'success',
 			'message' => $message ?: $settings['success_message'],
+			'status'  => 200,
 		];
 	}
 
-	private function error_result( string $message ): array {
+	private function error_result( string $message, string $code = 'submission_failed', int $status = 400 ): array {
 		return [
 			'type'    => 'error',
 			'message' => $message,
+			'code'    => $code,
+			'status'  => $status,
 		];
 	}
 }
