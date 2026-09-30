@@ -25,15 +25,6 @@ msgstr "Die Anmeldung konnte leider nicht abgeschlossen werden. Bitte versuche e
 msgid "I want to subscribe to the newsletter and accept that my information will be processed to send the newsletter. You can find details in the privacy policy. I can unsubscribe at any time."
 msgstr "Ich möchte den Newsletter abonnieren und akzeptiere, dass meine Angaben zur Zusendung des Newsletters verarbeitet werden. Hinweise findest du in der Datenschutzerklärung. Ich kann mich jederzeit wieder abmelden."
 
-msgid "3., Landstrasse"
-msgstr "3., Landstraße"
-
-msgid "18., Waehring"
-msgstr "18., Währing"
-
-msgid "19., Doebling"
-msgstr "19., Döbling"
-
 msgid "Listmonk base URL must start with https://."
 msgstr "Die Listmonk-Basis-URL muss mit https:// beginnen."
 
